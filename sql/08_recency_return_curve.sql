@@ -25,7 +25,7 @@ COPY (
             purchased_next_90d,
             revenue_next_90d_cents
         FROM 'data/marts/customer_outcomes_90d.parquet'
-        WHERE segment <> 'Excluded'
+        WHERE segment <> 'Review List'
     )
     SELECT
         snapshot_name,

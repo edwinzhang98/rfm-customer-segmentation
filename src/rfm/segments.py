@@ -18,14 +18,16 @@ from .config import load_config
 SEGMENT_ORDER = [
     "Champions",
     "Loyal",
+    "Slipping Regulars",
     "Potential Loyalists",
     "New Customers",
     "Needs Attention",
     "At Risk",
     "Hibernating",
     "Lost",
-    "Excluded",
+    "Review List",
 ]
+VALUE_TIERS = ["VIP", "High", "Mid", "Low", "None"]
 
 # Plain-language definition (for CRM colleagues) and the rule in score terms.
 SEGMENT_INFO: dict[str, dict[str, str]] = {
@@ -35,9 +37,14 @@ SEGMENT_INFO: dict[str, dict[str, str]] = {
         "group": "High value - keep",
     },
     "Loyal": {
-        "plain": "5+ orders in 12 months, last order within 120 days (not a Champion)",
-        "rule": "R >= 3 and F >= 4",
-        "group": "High value - keep",
+        "plain": "Bought in the last 60 days, 5+ orders in 12 months, under 200 CU (frequent, small baskets)",
+        "rule": "R >= 4 and F >= 4 (remaining)",
+        "group": "High frequency - grow basket",
+    },
+    "Slipping Regulars": {
+        "plain": "5+ orders in 12 months, but no order in the last 61-120 days",
+        "rule": "R = 3 and F >= 4",
+        "group": "Early warning - high value",
     },
     "Potential Loyalists": {
         "plain": "Bought in the last 60 days, 1-4 orders in 12 months (not new)",
@@ -60,7 +67,7 @@ SEGMENT_INFO: dict[str, dict[str, str]] = {
         "group": "Churn risk - win back",
     },
     "Hibernating": {
-        "plain": "Last order 121-364 days ago, 1-2 orders and < 200 CU",
+        "plain": "Last order 121-364 days ago, 1-2 orders and under 200 CU",
         "rule": "R <= 2 (remaining)",
         "group": "Low value lapsing",
     },
@@ -69,10 +76,10 @@ SEGMENT_INFO: dict[str, dict[str, str]] = {
         "rule": "recency >= 365 days",
         "group": "Churned",
     },
-    "Excluded": {
-        "plain": "Suspected staff / reseller account - not targeted",
-        "rule": "bulk or very frequent buying (see metric definitions)",
-        "group": "Not targeted",
+    "Review List": {
+        "plain": "Bulk or near-daily buying pattern: no offers or paid media until reviewed",
+        "rule": ">= 20 units of one article in an order, >= 100 units in an order, or purchases on >= 150 days",
+        "group": "Under review",
     },
 }
 
@@ -93,6 +100,7 @@ class Thresholds:
     m3_min_cu: float = 100
     m2_min_cu: float = 50
     new_customer_days: int = 90
+    vip_min_cu: float = 1000
 
     @classmethod
     def from_config(cls, cfg: dict | None = None) -> "Thresholds":
@@ -144,15 +152,25 @@ def assign_segments(df: pd.DataFrame, th: Thresholds, scores: pd.DataFrame | Non
         rec >= th.lookback_days,
         tenure < th.new_customer_days,
         (r >= 4) & (f >= 4) & (m >= 4),
-        (r >= 3) & (f >= 4),
+        (r >= 4) & (f >= 4),
+        (r == 3) & (f >= 4),
         r >= 4,
         r == 3,
         (f >= 3) | (m >= 4),
     ]
-    choices = ["Excluded", "Lost", "New Customers", "Champions", "Loyal", "Potential Loyalists",
-               "Needs Attention", "At Risk"]
+    choices = ["Review List", "Lost", "New Customers", "Champions", "Loyal", "Slipping Regulars",
+               "Potential Loyalists", "Needs Attention", "At Risk"]
     seg = np.select(conditions, choices, default="Hibernating")
     return pd.Series(pd.Categorical(seg, categories=SEGMENT_ORDER, ordered=True), index=df.index, name="segment")
+
+
+def value_tier(df: pd.DataFrame, th: Thresholds) -> pd.Series:
+    """Second axis: VIP / High / Mid / Low on 12-month spend; None = no 12-month order."""
+    mon = df["monetary_12m_cu"].to_numpy()
+    freq = df["frequency_12m"].to_numpy()
+    tier = np.select([freq == 0, mon >= th.vip_min_cu, mon >= th.m5_min_cu, mon >= th.m4_min_cu],
+                     ["None", "VIP", "High", "Mid"], default="Low")
+    return pd.Series(pd.Categorical(tier, categories=VALUE_TIERS, ordered=True), index=df.index, name="value_tier")
 
 
 def quantile_scores(df: pd.DataFrame) -> pd.DataFrame:

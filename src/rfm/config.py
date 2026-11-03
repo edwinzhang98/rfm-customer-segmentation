@@ -88,6 +88,7 @@ def sql_params(cfg: dict | None = None) -> dict[str, object]:
         "m3_min_cu": t["m3_min_cu"],
         "m2_min_cu": t["m2_min_cu"],
         "new_customer_days": t["new_customer_days"],
+        "vip_min_cu": t["vip_min_cu"],
         "excl_units_same_article": e["units_same_article_per_order"],
         "excl_units_per_order": e["units_per_order"],
         "excl_purchase_days": e["purchase_days_2y"],

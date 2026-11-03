@@ -34,8 +34,9 @@ rfm_thresholds:                  # business thresholds (fixed), see docs/02_metr
   m3_min_cu: 100                 # M3: 100-199
   m2_min_cu: 50                  # M2: 50-99, M1: < 50
   new_customer_days: 90          # first purchase within the last 90 days = New Customers
+  vip_min_cu: 1000               # value tier: VIP 1000+ CU, High 400-999, Mid 200-399, Low < 200 (12-month spend)
 
-exclusion:                       # suspected staff / reseller accounts (kept in totals, not targeted)
+exclusion:                       # Review List: bulk or near-daily buying (kept in totals; no offers or paid media)
   units_same_article_per_order: 20
   units_per_order: 100
   purchase_days_2y: 150
@@ -47,12 +48,20 @@ kmeans:
   stability_seeds: [1, 2, 3, 4, 5]
 
 economics:                       # planning assumptions for the campaign model (all adjustable in the dashboard)
-  gross_margin: 0.50             # H&M group gross margin FY2020 50.0%, FY2019 52.6% (full-year reports)
+  gross_margin: 0.50             # H&M group gross margin: FY2020 50.0%, FY2019 52.6% (full-year reports)
+  contribution_margin: 0.40      # base case for incremental orders: gross margin less ~10 pp fulfilment and returns
+                                 # (no returns data in this file; to be confirmed with Finance)
+  incremental_value: one_order   # value of an incremental buyer: one_order = one order at the audience AOV (base);
+                                 # avg_buyer = backtest average 90-day revenue per buyer (optimistic)
   baseline_redemption_share: 0.50  # share of customers who would buy anyway that also use a coupon if they get one
   contact_cost_cu:
-    email: 0.01
-    paid_social: 0.30
-  holdout_share: 0.10
+    email: 0.01                  # CU is a major-currency-scale unit (price points 9.99 / 19.99 / 14.99)
+    paid_social: 0.30            # per targeted non-subscriber, incl. impressions wasted on unmatched users
+  scenarios:                     # sensitivity: every arm is recomputed under each set
+    Pessimistic: {contribution_margin: 0.30, incremental_value: one_order, paid_social_cost: 0.60, redemption_share: 0.60, uplift_factor: 0.5}
+    Base:        {}
+    Optimistic:  {contribution_margin: 0.50, incremental_value: avg_buyer, paid_social_cost: 0.30, redemption_share: 0.40, uplift_factor: 1.5}
+  holdout_share: 0.10            # same share in every audience
   alpha: 0.05
   power: 0.80
 

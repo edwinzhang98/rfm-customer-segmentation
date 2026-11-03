@@ -251,13 +251,13 @@ SELECT * FROM (
            'looks like a default / placeholder value; postal code is not used in this analysis'
     FROM postal CROSS JOIN c_stats
     UNION ALL
-    SELECT 23, 'Extreme customers', 'suspected staff / reseller accounts (rule in 02_metric_definitions.md)',
+    SELECT 23, 'Extreme customers', 'bulk or near-daily buyers (Review List rule in 02_metric_definitions.md)',
            format('{:,} customers ({:.3f}%), {:.2f}% of revenue', n_flagged,
                   100.0 * n_flagged / n_customers,
                   100.0 * flagged_price / total_price),
            '< 0.1% of customers',
            CASE WHEN n_flagged = 0 THEN 'PASS' WHEN n_flagged < 0.001 * n_customers THEN 'FLAG' ELSE 'FAIL' END,
-           'kept in totals; segment = Excluded; never targeted; list goes to CRM for verification'
+           'kept in totals; segment = Review List: no offers or paid media until reviewed by CRM / retail ops'
     FROM extreme CROSS JOIN t_stats
 )
 ORDER BY check_id

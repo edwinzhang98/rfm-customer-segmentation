@@ -33,6 +33,7 @@ MART_SQL = (
     "10_segment_mix.sql",
     "11_cohort_retention.sql",
     "12_weekly_channel_trend.sql",
+    "14_segment_flow.sql",
 )
 
 

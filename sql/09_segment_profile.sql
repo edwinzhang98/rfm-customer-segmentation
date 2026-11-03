@@ -8,10 +8,11 @@
                                   two-year revenue and % (only measure that is non-zero for Lost)
              behaviour            avg recency, avg orders, AOV (= revenue / orders),
                                   units per order, median days between orders
-             channel (two years)  % online only / store only / omnichannel
+             channel              % online only / store only / omnichannel, on the last
+                                  12 months (operational) and on two years (context)
              reach                % newsletter subscribers (email-reachable), % active club members
              demographics         median age, % age unknown
-   Notes   : Revenue shares sum to 100% across the 9 groups (incl. Excluded), so the
+   Notes   : Revenue shares sum to 100% across the 10 groups (incl. Review List), so the
              table reconciles to the company total.
    Run     : python scripts/run_sql.py sql/09_segment_profile.sql
    ============================================================================= */
@@ -38,9 +39,13 @@ COPY (
             AVG(monetary_12m_cu)                                         AS avg_revenue_12m_cu,
             MEDIAN(avg_days_between_orders_12m)                          AS median_days_between_orders,
             AVG(tenure_days)                                             AS avg_tenure_days,
-            AVG((channel_profile = 'Online only')::INT)                  AS pct_online_only,
-            AVG((channel_profile = 'Store only')::INT)                   AS pct_store_only,
-            AVG((channel_profile = 'Omnichannel')::INT)                  AS pct_omnichannel,
+            AVG((channel_12m = 'Online only')::INT) FILTER (WHERE frequency_12m > 0)  AS pct_online_only_12m,
+            AVG((channel_12m = 'Store only')::INT)  FILTER (WHERE frequency_12m > 0)  AS pct_store_only_12m,
+            AVG((channel_12m = 'Omnichannel')::INT) FILTER (WHERE frequency_12m > 0)  AS pct_omnichannel_12m,
+            AVG((channel_profile_2y = 'Online only')::INT)               AS pct_online_only_2y,
+            AVG((channel_profile_2y = 'Store only')::INT)                AS pct_store_only_2y,
+            AVG((channel_profile_2y = 'Omnichannel')::INT)               AS pct_omnichannel_2y,
+            AVG((value_tier = 'VIP')::INT)                               AS pct_vip,
             SUM(online_revenue_12m_cents) / NULLIF(SUM(monetary_12m_cents), 0) AS online_revenue_share_12m,
             AVG(is_newsletter_subscriber::INT)                           AS pct_newsletter,
             AVG((club_member_status = 'ACTIVE')::INT)                    AS pct_club_active,
@@ -54,13 +59,14 @@ COPY (
         CASE segment
             WHEN 'Champions'           THEN 1
             WHEN 'Loyal'               THEN 2
-            WHEN 'Potential Loyalists' THEN 3
-            WHEN 'New Customers'       THEN 4
-            WHEN 'Needs Attention'     THEN 5
-            WHEN 'At Risk'             THEN 6
-            WHEN 'Hibernating'         THEN 7
-            WHEN 'Lost'                THEN 8
-            WHEN 'Excluded'            THEN 9
+            WHEN 'Slipping Regulars'   THEN 3
+            WHEN 'Potential Loyalists' THEN 4
+            WHEN 'New Customers'       THEN 5
+            WHEN 'Needs Attention'     THEN 6
+            WHEN 'At Risk'             THEN 7
+            WHEN 'Hibernating'         THEN 8
+            WHEN 'Lost'                THEN 9
+            WHEN 'Review List'         THEN 10
         END                                                              AS segment_order,
         customers,
         customers / SUM(customers) OVER ()                               AS pct_customers,
@@ -78,9 +84,13 @@ COPY (
         avg_revenue_12m_cu,
         median_days_between_orders,
         avg_tenure_days,
-        pct_online_only,
-        pct_store_only,
-        pct_omnichannel,
+        pct_online_only_12m,
+        pct_store_only_12m,
+        pct_omnichannel_12m,
+        pct_online_only_2y,
+        pct_store_only_2y,
+        pct_omnichannel_2y,
+        pct_vip,
         online_revenue_share_12m,
         pct_newsletter,
         pct_club_active,

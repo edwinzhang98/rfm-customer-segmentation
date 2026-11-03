@@ -19,15 +19,22 @@
      F: 5 = 10+ orders, 4 = 5-9, 3 = 3-4, 2 = 2, 1 = 1, 0 = none in 12 months
      M: 5 = 400+ CU, 4 = 200-399, 3 = 100-199, 2 = 50-99, 1 = < 50, 0 = none in 12 months
    Segments (first matching rule wins):
-     Excluded            suspected staff / reseller account (dim_customers.is_excluded)
+     Review List         bulk or near-daily buying pattern (dim_customers.is_excluded):
+                         kept in totals, no offers or paid media until reviewed
      Lost                no order in the last 365 days
      New Customers       first order within the last 90 days
      Champions           R >= 4 and F >= 4 and M >= 4
-     Loyal               R >= 3 and F >= 4
-     Potential Loyalists R >= 4                 (bought in the last 60 days, < 5 orders)
-     Needs Attention     R = 3                   (61-120 days, < 5 orders)
-     At Risk             R <= 2 and (F >= 3 or M >= 4)   (121-364 days, used to buy often / a lot)
-     Hibernating         everything else         (121-364 days, 1-2 orders, < 200 CU)
+     Loyal               R >= 4 and F >= 4            (recent and frequent, smaller baskets)
+     Slipping Regulars   R = 3 and F >= 4             (5+ orders, but 61-120 days quiet)
+     Potential Loyalists R >= 4                       (bought in the last 60 days, < 5 orders)
+     Needs Attention     R = 3                        (61-120 days, < 5 orders)
+     At Risk             R <= 2 and (F >= 3 or M >= 4) (121-364 days, used to buy often / a lot)
+     Hibernating         everything else               (121-364 days, 1-2 orders, < 200 CU)
+   Value tier (second axis, 12-month spend): VIP 1,000+ CU, High 400-999, Mid 200-399,
+     Low < 200, None = no 12-month spend.
+   Channel (operational, 12 months): Online only / Store only / Omnichannel / No 12m orders.
+     dim_customers.channel_profile (two years, includes orders after a backtest date) is
+     carried as channel_profile_2y for context only - never use it with backtest outcomes.
    Params  : snapshot_current / snapshot_seasonal / snapshot_recent, lookback_days,
              R / F / M thresholds, new_customer_days (defaults = config.yaml)
    Run     : python scripts/run_sql.py sql/05_customer_rfm.sql
@@ -50,6 +57,7 @@ SET VARIABLE m4_min_cu         = COALESCE(getvariable('m4_min_cu'), 200);
 SET VARIABLE m3_min_cu         = COALESCE(getvariable('m3_min_cu'), 100);
 SET VARIABLE m2_min_cu         = COALESCE(getvariable('m2_min_cu'), 50);
 SET VARIABLE new_customer_days = COALESCE(getvariable('new_customer_days'), 90);
+SET VARIABLE vip_min_cu        = COALESCE(getvariable('vip_min_cu'), 1000);
 
 COPY (
     WITH
@@ -159,18 +167,28 @@ COPY (
         s.m_score,
         CAST(s.r_score AS VARCHAR) || CAST(s.f_score AS VARCHAR) || CAST(s.m_score AS VARCHAR) AS rfm_code,
         CASE
-            WHEN d.is_excluded                                         THEN 'Excluded'
+            WHEN d.is_excluded                                         THEN 'Review List'
             WHEN s.recency_days >= getvariable('lookback_days')        THEN 'Lost'
             WHEN s.tenure_days  <  getvariable('new_customer_days')    THEN 'New Customers'
             WHEN s.r_score >= 4 AND s.f_score >= 4 AND s.m_score >= 4  THEN 'Champions'
-            WHEN s.r_score >= 3 AND s.f_score >= 4                     THEN 'Loyal'
+            WHEN s.r_score >= 4 AND s.f_score >= 4                     THEN 'Loyal'
+            WHEN s.r_score  = 3 AND s.f_score >= 4                     THEN 'Slipping Regulars'
             WHEN s.r_score >= 4                                        THEN 'Potential Loyalists'
             WHEN s.r_score  = 3                                        THEN 'Needs Attention'
             WHEN s.f_score >= 3 OR s.m_score >= 4                      THEN 'At Risk'
             ELSE 'Hibernating'
         END                                                            AS segment,
+        CASE WHEN s.frequency_12m = 0                                  THEN 'None'
+             WHEN s.monetary_12m_cu >= getvariable('vip_min_cu')       THEN 'VIP'
+             WHEN s.monetary_12m_cu >= getvariable('m5_min_cu')        THEN 'High'
+             WHEN s.monetary_12m_cu >= getvariable('m4_min_cu')        THEN 'Mid'
+             ELSE 'Low' END                                            AS value_tier,
+        CASE WHEN s.frequency_12m = 0                                  THEN 'No 12m orders'
+             WHEN s.store_orders_12m = 0                               THEN 'Online only'
+             WHEN s.online_orders_12m = 0                              THEN 'Store only'
+             ELSE 'Omnichannel' END                                    AS channel_12m,
         d.is_excluded,
-        d.channel_profile,
+        d.channel_profile                                              AS channel_profile_2y,
         d.is_newsletter_subscriber,
         d.club_member_status,
         d.age_band
