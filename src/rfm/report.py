@@ -95,9 +95,14 @@ ACTION = Template("""<!doctype html>
 
 
 # ----------------------------------------------------------------------------- helpers
+_FIG_COUNTER = [0]
+
+
 def _fig(fig) -> str:
-    """Plotly div; plotly.js is embedded once in <head>, so every figure uses include_plotlyjs=False."""
-    return '<div class="fig">' + pio.to_html(fig, include_plotlyjs=False, full_html=False,
+    """Plotly div; plotly.js is embedded once in <head>, so every figure uses include_plotlyjs=False.
+    Div ids are numbered (not random) so the report is byte-identical between runs."""
+    _FIG_COUNTER[0] += 1
+    return '<div class="fig">' + pio.to_html(fig, include_plotlyjs=False, full_html=False, div_id=f"fig-{_FIG_COUNTER[0]:02d}",
                                               config={"displaylogo": False, "responsive": True}) + "</div>"
 
 
@@ -143,6 +148,7 @@ def _table(df: pd.DataFrame) -> str:
 
 # ----------------------------------------------------------------------------- report
 def build_report() -> str:
+    _FIG_COUNTER[0] = 0
     m = D.metrics()
     d, h, camp, km = m["data"], m["headline"], m["campaign"], m["kmeans"]
     seg = m["segments"]
