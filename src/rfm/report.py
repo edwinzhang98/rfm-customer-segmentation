@@ -82,6 +82,8 @@ ACTION = Template("""<!doctype html>
 <div class="tldr"><b>The answer</b><ul>{% for b in answer %}<li>{{ b }}</li>{% endfor %}</ul></div>
 <h2>Who gets what</h2>
 <div class="tablewrap">{{ plan_table }}</div>
+<p class="note">Focus: the categories an audience over-indexes on. The number in brackets compares the category's share of the audience's
+spend with its share for all customers (100 = average, 126 = 26% higher). App messages go to the same email subscribers.</p>
 <h2>Budget</h2>
 <div class="tablewrap">{{ budget_table }}</div>
 <p class="note">If the budget is cut, drop in this order: (1) the At Risk 10% test cell, (2) paid social for the New Customers journey,
@@ -165,16 +167,17 @@ def build_report() -> str:
         f"<b>Keep:</b> Champions are {pct(h['champions_pct_customers'], 0)} of customers and {pct(h['champions_pct_revenue_12m'], 0)} of 12-month revenue; "
         f"{fmt_n(h['vip_customers'])} VIPs (1,000+ CU a year) bring in {pct(h['vip_pct_revenue_12m'], 0)}. {pct(seg['Champions']['repurchase_rate_90d_base'], 0)} "
         "of Champions buy again within 90 days anyway, so they get early access and service, not discounts.",
-        f"<b>Win back:</b> {fmt_n(h['at_risk_customers'])} At Risk customers ({pct(h['at_risk_pct_customers'])}) will spend about "
-        f"{fmt_cu(h['at_risk_expected_90d_cu'])} in the next 90 days if we do nothing, {fmt_cu(h['at_risk_gap_90d_cu'])} below their usual pace; "
-        f"{fmt_n(h['slipping_customers'])} Slipping Regulars are the early warning (gap {fmt_cu(h['slipping_gap_90d_cu'])}). The plan expects to win back about "
-        f"{fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk: most of the gap is natural slowdown.",
+        f"<b>Win back:</b> {fmt_n(h['at_risk_customers'])} At Risk customers ({pct(h['at_risk_pct_customers'])}) are expected to spend about "
+        f"{fmt_cu(h['at_risk_expected_90d_cu'])} in the next 90 days with business-as-usual contact only, {fmt_cu(h['at_risk_gap_90d_cu'])} below their "
+        f"usual pace; {fmt_n(h['slipping_customers'])} Slipping Regulars are the early warning (gap {fmt_cu(h['slipping_gap_90d_cu'])}). The plan expects "
+        f"about {fmt_cu(h['at_risk_addressable_90d_cu'])} of incremental revenue from At Risk, {fmt_cu(h['at_risk_addressable_content_90d_cu'])} of it from "
+        "content emails: most of the gap is natural slowdown.",
         f"<b>Online-only:</b> {fmt_n(h['online_only_active_customers'])} active customers ({pct(h['pct_online_only_active'], 0)}) had no identified store "
         "purchase in 12 months. Their bigger baskets are an online-channel effect and they come back slightly less often; nothing supports paying "
         "to push them into stores. Channel decides the message.",
         f"<b>Plan:</b> content-led rollout ({fmt_cu(sc['Base | Rollout']['total_cost_cu'])}), discounts only in two test cells, budget ask "
-        f"{fmt_cu(camp['budget_total_cu'])}; expected rollout net {fmt_cu(sc['Base | Rollout']['net_profit_cu'])} (range "
-        f"{fmt_cu(sc['Pessimistic | Rollout']['net_profit_cu'])} to {fmt_cu(sc['Optimistic | Rollout']['net_profit_cu'])}).",
+        f"{fmt_cu(camp['budget_total_cu'])}; expected rollout net {D.fmt_k(sc['Base | Rollout']['net_profit_cu'])} CU on planning assumptions "
+        f"(pessimistic {D.fmt_k(sc['Pessimistic | Rollout']['net_profit_cu'])}, optimistic {D.fmt_k(sc['Optimistic | Rollout']['net_profit_cu'])}).",
         f"<b>Measurement:</b> the same 10% holdout in every audience; the campaign-wide lift is detectable from {camp['pooled_read']['mde_rate_pp']:.2f} pp; "
         f"the two discount cells are sized to give a clear yes/no by {camp['read_date']}.",
     ]
@@ -193,7 +196,7 @@ def build_report() -> str:
            "churn and needs winning back, and who only buys online and never comes into a store? Give me segments, a recommendation per segment, "
            "and how we will measure whether this campaign worked.\"</i>"),
         _p("Turned into analysis questions: (1) which customers bought recently, often and for a lot, and what share of revenue do they drive; "
-           "(2) which valuable customers have gone quiet, how likely they are to come back on their own and what they will spend if we do nothing; "
+           "(2) which valuable customers have gone quiet, how likely they are to come back on their own and what they are expected to spend if we do nothing; "
            "(3) who only buys online, and does that matter; (4) what each segment should get, at what cost; (5) how to measure the campaign. "
            "Decision maker: the CRM Manager; consulted: e-commerce, retail operations, finance."),
     ]})
@@ -227,8 +230,8 @@ def build_report() -> str:
         F(C.return_curve(D.mart("recency_return_curve"))),
         _take("The chance of buying again falls smoothly with time since the last order: recency is the right main axis, and the cut-offs are a "
               "business choice placed on a smooth curve (30 / 60 days = a purchase cycle, 120 = a season, 180 = two seasons, 365 = a year)."),
-        _p("Why fixed thresholds rather than quintiles: the R and M cut-offs are the active-customer quintiles rounded to numbers people can say out "
-           "loud; Frequency is set by hand because 34% of active customers have exactly one order, so quintile edges tie (the bands either merge or "
+        _p("Why fixed thresholds rather than quintiles: the R and M cut-offs sit near the active-customer quintiles (R 23 / 60 / 112 / 215 days, "
+           "M 40 / 85 / 166 / 352 CU) and are set to business periods and round amounts the CRM team plans with; Frequency is set by hand because 34% of active customers have exactly one order, so quintile edges tie (the bands either merge or "
            "split identical customers arbitrarily); fixed numbers keep an audience's meaning stable month to month. Segments are assigned in order, "
            "first match wins:"),
         _table(rules),
@@ -287,8 +290,8 @@ def build_report() -> str:
         _call(f"The gap vs usual pace is not money a campaign can recover: groups chosen for a strong year fall back (Champions spending 400+ CU realised "
               f"{pct(h['champions_realisation_m5'], 0)} of their pace, those at 200-399 CU {pct(h['champions_realisation_m4'], 0)}), and groups chosen for "
               f"going quiet keep slowing. The plan expects about {fmt_cu(h['at_risk_addressable_90d_cu'])} of incremental revenue from At Risk "
-              f"({fmt_cu(h['at_risk_addressable_content_90d_cu'])} from the content emails, the rest from the 10% offer test cell), a few percent "
-              "of its gap; that measured lift, not the gap, is what we report."),
+              f"({fmt_cu(h['at_risk_addressable_content_90d_cu'])} from the content emails; the rest from the 10% offer test cell, which is expected "
+              "to lose money on its own), a few percent of its gap; that measured lift, not the gap, is what we report."),
     ]})
     # 7 campaign ----------------------------------------------------------------
     plan_tbl = econ[["audience_label", "arm", "role", "action", "timing", "discount_rate", "uplift_pp", "breakeven_uplift_pp", "net_profit_cu"]].copy()
@@ -298,7 +301,8 @@ def build_report() -> str:
     budget = D.mart("campaign_budget")
     sections.append({"id": "plan", "title": "The autumn plan and its economics", "blocks": [
         _table(plan_tbl),
-        _note("Hibernating and the Review List get no autumn spend. 'Not run' rows were considered and rejected."),
+        _note("The Review List gets no offers or paid media until reviewed. 'Not run' rows were considered and rejected. "
+              "Net is the base case under planning assumptions, not a measurement."),
         F(C.net_profit_by_arm(econ)),
         F(C.breakeven_vs_assumed(econ)),
         _take("A coupon is paid on every redeemed order, including orders from customers who would have bought anyway, and an extra buyer is worth "
@@ -371,19 +375,20 @@ def build_action_plan() -> str:
     rows = []
     for r in econ[econ.role != "Not run"].itertuples():
         rows.append({"Audience": r.audience_label, "Action": r.arm + (" (test cell)" if r.role == "Test cell" else ""),
-                     "When": r.timing.split(";")[0], "Channel": "Email + paid social" if r.use_paid_social else ("Email only" if "subscribers only" in r.channels.lower() else "Email + member app"),
-                     "Focus": focus.get(r.audience, "-").replace(" (no category at index >= 120)", ""),
+                     "When": r.timing.split(";")[0], "Channel": CP.channel_label(r.channels, r.use_paid_social),
+                     "Focus": focus.get(r.audience, "-"),
                      "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}%", "KPI": r.kpi.split("(")[0].strip()})
     for s, why in CP.NO_CAMPAIGN.items():
-        rows.append({"Audience": s, "Action": "No autumn spend", "When": "-", "Channel": "-", "Focus": "-", "Discount": "-", "KPI": "-"})
+        rows.append({"Audience": s, "Action": "No offers or paid media until reviewed" if s == "Review List" else "No autumn spend",
+                     "When": "-", "Channel": "-", "Focus": "-", "Discount": "-", "KPI": "-"})
     budget = D.mart("campaign_budget")
     answer = [
         f"Keep: Champions ({fmt_n(seg['Champions']['customers'])}, {pct(seg['Champions']['pct_revenue_12m'], 0)} of revenue) with early access, no discount.",
         f"Win back: At Risk ({fmt_n(h['at_risk_customers'])}) and Slipping Regulars ({fmt_n(h['slipping_customers'])}) with personalised content; "
         "offers only in test cells.",
         f"Online-only ({fmt_n(h['online_only_active_customers'])} active): reach them online; no paid push into stores.",
-        f"Budget ask {fmt_cu(camp['budget_total_cu'])}; expected rollout net {fmt_cu(sc['Base | Rollout']['net_profit_cu'])} "
-        f"(range {fmt_cu(sc['Pessimistic | Rollout']['net_profit_cu'])} to {fmt_cu(sc['Optimistic | Rollout']['net_profit_cu'])}).",
+        f"Budget ask {fmt_cu(camp['budget_total_cu'])}; expected rollout net {D.fmt_k(sc['Base | Rollout']['net_profit_cu'])} CU on planning "
+        f"assumptions (pessimistic {D.fmt_k(sc['Pessimistic | Rollout']['net_profit_cu'])}, optimistic {D.fmt_k(sc['Optimistic | Rollout']['net_profit_cu'])}).",
     ]
     measure = [
         "Same 10% holdout in every audience (no campaign communication; business-as-usual newsletters continue).",

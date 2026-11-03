@@ -42,6 +42,16 @@ def fmt_cu(value: float, digits: int = 1) -> str:
     return f"{v:,.0f} CU"
 
 
+def fmt_k(value: float) -> str:
+    """Planning amounts in thousands with a sign and two significant figures (they rest on assumed
+    lifts, not measurements): 53,428 -> '+53K', 8,669 -> '+8.7K', -15,208 -> '-15K'."""
+    v = float(value)
+    if v != v or v in (float("inf"), float("-inf")):
+        return "-"
+    k = v / 1000
+    return f"{k:+,.0f}K" if abs(k) >= 10 else f"{k:+.1f}K"
+
+
 def fmt_n(value: float, digits: int = 1) -> str:
     """Compact count: 190,320 -> '190.3K'."""
     v = float(value)

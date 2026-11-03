@@ -57,7 +57,7 @@ a0 = CP.default_assumptions()
 with st.expander("Assumptions shared by every arm", expanded=True):
     c1, c2, c3 = st.columns(3)
     margin = c1.slider("Contribution margin on incremental orders", 0.20, 0.60, float(a0["contribution_margin"]), 0.01,
-                       help="Base 40% = H&M gross margin (50.0% FY2020) less ~10 pp fulfilment and returns; to be confirmed with Finance")
+                       help="Base 40% = H&M gross margin (52.6% in FY2019, 49.4% in H1 2020) less ~10 pp for fulfilment and returns; to be confirmed with Finance")
     value = c1.radio("Value of one incremental buyer", ["One order at the audience AOV (base)", "Average 90-day buyer (optimistic)"],
                      key="val_basis")
     rho = c2.slider("Coupon use by customers who would buy anyway", 0.0, 1.0, float(a0["redemption_share"]), 0.05,

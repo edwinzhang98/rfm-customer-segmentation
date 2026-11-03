@@ -6,7 +6,7 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 
 help:
 	@echo "make setup        create .venv and install pinned requirements (+ this repo as a package)"
-	@echo "make all          raw CSV -> marts -> analysis -> figures -> report -> docs -> notebooks"
+	@echo "make all          raw CSV -> marts -> analysis -> figures -> report -> notebooks -> docs"
 	@echo "make data         staging + data quality + marts + reconciliation only"
 	@echo "make test         SQL/Python parity + every dashboard page + interactive controls"
 	@echo "make dashboard    streamlit run dashboard/app.py"

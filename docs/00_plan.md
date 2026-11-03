@@ -2,7 +2,7 @@
 
 **Project:** RFM customer segmentation and autumn CRM campaign plan, H&M transactions 2018-09-20 to 2020-09-22
 **Owner:** Marketing Analyst, CRM / Marketing Analytics (requester: CRM Manager)
-**Started:** 2026-11-03 · data snapshot 2020-09-22 · campaign launch assumed for the week of 2020-09-28
+**Version:** 1.0 · data snapshot 2020-09-22 · campaign launch assumed for the week of 2020-09-28
 
 ## 1. Data
 
@@ -41,19 +41,20 @@ Public RFM write-ups usually stop at quintile scores, segment sizes and generic 
 
 ## 5. Decision log
 
-| Date | Decision | Why | Consulted |
+| Stage | Decision | Why | Consulted |
 |---|---|---|---|
-| 2026-11-03 | Use the H&M data, not Olist | real, large, has customer attributes, article hierarchy and store/online channel, all needed for the questions asked | CRM Manager (brief) |
-| 2026-11-03 | Snapshot 2020-09-22; F and M over the trailing 365 days | last day in the data; one full fashion season cycle; the same features can be rebuilt at backtest dates | — |
-| 2026-11-03 | Fixed thresholds, quintiles shown for comparison | R and M cut-offs are rounded quintiles; F ties on one order (34% of active customers); fixed numbers keep audiences stable month to month | CRM team (naming) |
-| 2026-11-03 | Money in CU = price × 590, gross demand | reconstructed shelf prices; shares and ratios do not depend on the unit; no returns in the data | Finance to confirm margin |
-| 2026-11-03 | K-Means as a cross-check only | no natural clusters (separation best at k = 2); clusters move when refit; CRM tools need rules | — |
-| 2026-11-03 | Split Loyal into Loyal and Slipping Regulars; add a value tier | 65% of the original Loyal group were frequent buyers already 61–120 days quiet; high spenders also sit outside Champions | method review |
-| 2026-11-03 | Do-nothing projection = gap vs usual pace, re-weighted to today's mix, with scenarios | part of every gap is natural slowdown; today's At Risk group is unlike either backtest (60% last bought in the 2020 lockdown) | method review |
-| 2026-11-03 | Content-led rollout; discounts only in two sized test cells | valued at one order, a coupon needs a 5+ point lift to pay back where a quarter or more buy anyway | Finance (margin), CRM Manager (budget) |
-| 2026-11-03 | Same 10% holdout in every audience; ITT; repurchase rate as primary KPI | unequal holdout shares would bias the pooled read; revenue is too noisy to be the primary KPI | — |
-| 2026-11-03 | Review List instead of "exclude" for bulk / near-daily buyers | the data cannot prove staff or reseller status; 0.5% of revenue, so no result depends on it | Retail ops to review |
-| 2026-11-03 | Cohort analysis as an appendix page after the seven presentation pages | supports the New Customers decision without changing the story order | — |
+| Scoping | Use the H&M data, not Olist | real, large, has customer attributes, article hierarchy and store/online channel, all needed for the questions asked | CRM Manager (brief) |
+| Scoping | Snapshot 2020-09-22; F and M over the trailing 365 days | last day in the data; one full fashion season cycle; the same features can be rebuilt at backtest dates | — |
+| Method | Fixed thresholds, quintiles shown for comparison | R and M cut-offs set near the quintiles, then moved to business periods and round amounts; F ties on one order (34% of active customers); fixed numbers keep audiences stable month to month | CRM team (naming) |
+| Data | Money in CU = price × 590, gross demand | reconstructed shelf prices; shares and ratios do not depend on the unit; no returns in the data | Finance to confirm margin |
+| Method | K-Means as a cross-check only | no natural clusters (separation best at k = 2); clusters move when refit; CRM tools need rules | — |
+| Method review | Split Loyal into Loyal and Slipping Regulars; add a value tier | 65% of the original Loyal group were frequent buyers already 61–120 days quiet; high spenders also sit outside Champions | method review |
+| Method review | Do-nothing projection = gap vs usual pace, re-weighted to today's mix, with scenarios | part of every gap is natural slowdown; today's At Risk group is unlike either backtest (60% last bought in the 2020 lockdown) | method review |
+| Plan | Content-led rollout; discounts only in two sized test cells | valued at one order, a coupon needs a 5+ point lift to pay back where a quarter or more buy anyway | Finance (margin), CRM Manager (budget) |
+| Measurement | Same 10% holdout in every audience; ITT; repurchase rate as primary KPI | unequal holdout shares would bias the pooled read; revenue is too noisy to be the primary KPI | — |
+| Data | Review List instead of "exclude" for bulk / near-daily buyers | the data cannot prove staff or reseller status; 0.5% of revenue, so no result depends on it | Retail ops to review |
+| Plan review | One low-cost email for Hibernating as well as Lost | the plan's own economics: a single email pays back at a lift of about 0.05 points, and Hibernating customers are more recent than Lost | CRM Manager |
+| Presentation | Cohort analysis as an appendix page after the seven presentation pages | supports the New Customers decision without changing the story order | — |
 
 ## 6. Known limitations (tracked in `assumptions.md`)
 

@@ -72,6 +72,7 @@ AUDIENCES: list[Audience] = [
     Audience("at_risk_181_364_low", "At Risk", "At Risk, 181-364 days, < 200 CU",
              "segment = At Risk and R score = 1 and 12-month spend < 200 CU",
              "segment == 'At Risk' and r_score == 1 and monetary_12m_cu < 200"),
+    Audience("hibernating", "Hibernating", "Hibernating", "segment = Hibernating", "segment == 'Hibernating'"),
     Audience("lost", "Lost", "Lost", "segment = Lost", "segment == 'Lost'"),
 ]
 AUDIENCE_BY_KEY = {a.key: a for a in AUDIENCES}
@@ -100,7 +101,7 @@ PLAN: list[Arm] = [
         "Keep the 14% of customers who bring in over half of 12-month revenue, without discounting",
         "Personal 48-hour early-access link to the autumn collection; free click-and-collect on the early-access order. No % discount.",
         "2020-09-29, two days before the public launch",
-        "Email (subscribers) + personalised member-app message (treated customers only)",
+        "Email + personalised member-app message (subscribers only)",
         False, 0.0, 0.5, 0.90,
         "90-day repurchase rate vs holdout (revenue per customer secondary)",
         "Keep as an always-on Champions benefit if the pooled campaign lift is positive; segment read is directional",
@@ -109,7 +110,7 @@ PLAN: list[Arm] = [
         "Frequent buyers with small baskets (AOV ~24 CU): add one more item per order",
         "'Complete your order' picks (accessories, basics multipacks) and a free-delivery threshold reminder. No discount.",
         "Week 2 (from 2020-10-05)",
-        "Email (subscribers) + member app",
+        "Email + member-app message (subscribers only)",
         False, 0.0, 0.5, 0.90,
         "90-day repurchase rate; AOV vs holdout (secondary)",
         "Directional only (too small to read alone); judge AOV in the next quarterly review",
@@ -123,7 +124,7 @@ PLAN: list[Arm] = [
         "Early warning for valuable regulars: 5+ orders a year, now 61-120 days quiet - typically twice their usual gap between orders",
         "'New in for autumn' picks from the categories they bought most, sent in week 1; second touch on day 10 to those who have not bought since launch. No discount.",
         "Week 1 (2020-09-28), reminder day 10",
-        "Email (subscribers) + member app",
+        "Email + member-app message (subscribers only)",
         False, 0.0, 1.5, 0.90,
         "90-day repurchase rate vs holdout",
         "Make it an always-on trigger (fires when a regular passes 1.5x their usual gap) if lift > 0 at day 90",
@@ -132,7 +133,7 @@ PLAN: list[Arm] = [
         "Build the habit: the second and third order while the brand is top of mind",
         "Personalised 'complete the look' email from the last order's category; customers who came back after 12+ months get a 'welcome back' version. No discount.",
         "Week 1 (from 2020-09-28)",
-        "Email (subscribers) + member app",
+        "Email + member-app message (subscribers only)",
         False, 0.0, 1.0, 0.90,
         "90-day repurchase rate vs holdout",
         "Directional only; keep if the pooled lift is positive",
@@ -159,7 +160,7 @@ PLAN: list[Arm] = [
         "Re-engage summer buyers (61-120 days quiet) before they lapse",
         "New-arrivals edit that bridges from what they bought in summer (swimwear, underwear) to autumn basics; one-order customers get the second-order version of the welcome email. No discount.",
         "Week 1 (from 2020-09-28); reminder in week 3 to those who have not bought",
-        "Email (subscribers) + member app",
+        "Email + member-app message (subscribers only)",
         False, 0.0, 1.0, 0.90,
         "90-day repurchase rate vs holdout",
         "Directional only; keep if the pooled lift is positive",
@@ -205,6 +206,15 @@ PLAN: list[Arm] = [
         "90-day repurchase rate vs holdout (directional)",
         "Directional only",
         "Near-zero cost"),
+    Arm("hibernating", "One 'new season' email", "Rollout",
+        "Light buyers (1-2 orders, under 200 CU) quiet for 4-12 months: one cheap reminder before they lapse",
+        "Single 'new for autumn' email leading with underwear and nightwear (the category they over-index on); no paid media, no discount",
+        "Week 4 (from 2020-10-19), with the Lost email",
+        "Email (subscribers only)",
+        False, 0.0, 0.3, 0.90,
+        "90-day repurchase rate vs holdout (directional)",
+        "Directional only; feeds the pooled read. Non-responders stay on the business-as-usual newsletter",
+        "Low expected lift; near-zero cost"),
     Arm("lost", "One reactivation email", "Rollout",
         "Cheap last attempt, then move non-responders to a low-frequency list",
         "Single 'see what's new' email in week 4 leading with kids' autumn and menswear (their over-indexed departments); suppressed from paid media",
@@ -217,9 +227,16 @@ PLAN: list[Arm] = [
 ]
 
 NO_CAMPAIGN = {
-    "Hibernating": "No autumn campaign spend: business-as-usual newsletter only (which the holdout also receives), so there is nothing to measure",
     "Review List": "No offers or paid media until CRM / retail ops have reviewed the accounts; service messages continue",
 }
+
+
+def channel_label(channels: str, use_paid_social: bool) -> str:
+    """Short channel name for the summary tables. App messages go to the same subscribers as the email
+    (app reach is not in the data), so only paid social widens an audience."""
+    if use_paid_social:
+        return "Email + paid social"
+    return "Email + app message (subscribers)" if "app" in channels.lower() else "Email (subscribers only)"
 
 
 def plan_frame() -> pd.DataFrame:
@@ -279,7 +296,7 @@ def audience_inputs() -> pd.DataFrame:
 
 def category_focus(n: int = 2, min_index: float = 120, min_share: float = 0.05) -> pd.Series:
     """Categories a segment clearly over-indexes on: affinity index >= 120 AND >= 5% of the
-    segment's revenue (garment groups and departments). Segments with none mirror the overall mix."""
+    segment's revenue (garment groups and departments). Segments with none mirror the overall mix and get FOCUS_FALLBACK."""
     mix = pd.read_parquet(get_paths().marts / "segment_mix.parquet")
     out = {}
     for seg, d in mix.groupby("segment"):
@@ -292,7 +309,7 @@ def category_focus(n: int = 2, min_index: float = 120, min_share: float = 0.05) 
     return pd.Series(out, name="category_focus")
 
 
-FOCUS_FALLBACK = "their own top categories (no category at index >= 120)"
+FOCUS_FALLBACK = "their own usual categories"
 
 
 def audience_category_focus(n: int = 2, min_index: float = 120, min_share: float = 0.05) -> pd.Series:

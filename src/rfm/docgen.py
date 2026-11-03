@@ -12,6 +12,7 @@ tables never have to be retyped, so they cannot drift from the analysis.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Callable
 
@@ -41,20 +42,45 @@ def _md(df: pd.DataFrame) -> str:
 
 
 # ----------------------------------------------------------------------------- tables
+_k = D.fmt_k
+
+
+def _main_categories(n: int = 3) -> dict[str, str]:
+    """Garment groups with the largest share of each segment's spend (12 months; two years for Lost)."""
+    mix = D.mart("segment_mix")
+    g = mix[(mix.dimension == "garment_group") & (mix.basis == "revenue") & (mix.value != "Unknown")]
+    out = {}
+    for seg, d in g.groupby("segment"):
+        d = d.sort_values("segment_share", ascending=False).head(n)
+        out[seg] = ", ".join(f"{v} {100 * sh:.0f}%" for v, sh in zip(d["value"], d["segment_share"]))
+    return out
+
+
 def t_segment_summary() -> str:
     prof = D.mart("segment_profile")
+    cats = _main_categories()
     rows = []
     for r in prof.itertuples():
+        gap = r.median_days_between_orders
         rows.append({"Segment": r.segment, "Rule (scores)": SEGMENT_INFO[r.segment]["rule"],
                      "In plain words": SEGMENT_INFO[r.segment]["plain"], "Customers": _n(r.customers),
                      "% customers": _p(r.pct_customers), "% 12m revenue": _p(r.pct_revenue_12m),
                      "AOV (CU)": _n(r.aov_12m_cu if pd.notna(r.aov_12m_cu) else r.aov_2y_cu, 1),
-                     "Orders / 12m": _n(r.avg_orders_12m, 1), "Email reach": _p(r.pct_newsletter, 0)})
+                     "Orders / 12m": _n(r.avg_orders_12m, 1),
+                     "Days between orders": _n(gap) if pd.notna(gap) else "-",
+                     "Main categories (share of spend)": cats.get(r.segment, "-"),
+                     "Email reach": _p(r.pct_newsletter, 0)})
     tot = prof[["customers", "pct_customers", "pct_revenue_12m"]].sum()
     rows.append({"Segment": "**Total**", "Rule (scores)": "", "In plain words": "all customers with an order 2018-09-20 to 2020-09-22",
                  "Customers": f"**{_n(tot.customers)}**", "% customers": f"**{_p(tot.pct_customers)}**",
-                 "% 12m revenue": f"**{_p(tot.pct_revenue_12m)}**", "AOV (CU)": "", "Orders / 12m": "", "Email reach": ""})
-    return _md(pd.DataFrame(rows))
+                 "% 12m revenue": f"**{_p(tot.pct_revenue_12m)}**", "AOV (CU)": "", "Orders / 12m": "",
+                 "Days between orders": "", "Main categories (share of spend)": "", "Email reach": ""})
+    note = ("Days between orders: median of each customer's average gap between orders in the 12 months, customers with 2+ "
+            "orders only (for lapsed segments, the gap while they were still buying). Main categories: the three garment groups "
+            "with the largest share of the segment's spend (12 months; two years for Lost). The largest categories are similar in "
+            "every segment; what sets a segment apart is the category it over-indexes on, which the campaign uses as its "
+            "category focus.")
+    return _md(pd.DataFrame(rows)) + "\n\n" + note
 
 
 def t_segment_counts() -> str:
@@ -107,12 +133,14 @@ def t_campaign_table() -> str:
     econ = D.mart("campaign_economics")
     rows = []
     for r in econ.itertuples():
-        rows.append({"Audience": r.audience_label, "Arm": r.arm, "Role": r.role, "Action": r.action, "Timing": r.timing,
-                     "Channel": r.channels, "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}% off one order",
-                     "Assumed lift": f"+{r.uplift_pp:.1f} pp", "Primary KPI": r.kpi, "Decision rule": r.decision_rule})
+        rows.append({"Audience": r.audience_label, "Arm": r.arm, "Role": r.role, "Goal": r.objective, "Action": r.action,
+                     "Timing": r.timing, "Channel": r.channels,
+                     "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}% off one order",
+                     "Assumed lift": f"+{r.uplift_pp:.1f} pp", "Primary KPI": r.kpi, "Decision rule": r.decision_rule,
+                     "Risk": r.risk})
     for seg, why in CP.NO_CAMPAIGN.items():
-        rows.append({"Audience": seg, "Arm": "No autumn campaign", "Role": "-", "Action": why, "Timing": "-", "Channel": "-",
-                     "Discount": "-", "Assumed lift": "-", "Primary KPI": "-", "Decision rule": "-"})
+        rows.append({"Audience": seg, "Arm": "No autumn campaign", "Role": "-", "Goal": "-", "Action": why, "Timing": "-",
+                     "Channel": "-", "Discount": "-", "Assumed lift": "-", "Primary KPI": "-", "Decision rule": "-", "Risk": "-"})
     return _md(pd.DataFrame(rows))
 
 
@@ -122,17 +150,21 @@ def t_campaign_short() -> str:
     focus = CP.audience_category_focus()
     rows = []
     for r in econ[econ.role != "Not run"].itertuples():
-        channel = ("Email + paid social" if r.use_paid_social else
-                   "Email only" if "subscribers only" in r.channels.lower() else "Email + member app")
         rows.append({"Audience": r.audience_label, "Action": r.arm + (" (test cell)" if r.role == "Test cell" else ""),
-                     "When": r.timing.split(";")[0], "Channel": channel,
+                     "When": r.timing.split(";")[0], "Channel": CP.channel_label(r.channels, r.use_paid_social),
                      "Category focus": focus.get(r.audience, "-"),
                      "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}%",
-                     "Expected net (CU)": _n(r.net_profit_cu)})
-    for seg, why in CP.NO_CAMPAIGN.items():
-        rows.append({"Audience": seg, "Action": "no autumn spend", "When": "-", "Channel": "-", "Category focus": "-", "Discount": "-",
-                     "Expected net (CU)": "-"})
-    return _md(pd.DataFrame(rows))
+                     "Expected net (CU)": _k(r.net_profit_cu)})
+    for seg in CP.NO_CAMPAIGN:
+        rows.append({"Audience": seg, "Action": "no offers or paid media until reviewed" if seg == "Review List" else "no autumn spend",
+                     "When": "-", "Channel": "-", "Category focus": "-", "Discount": "-", "Expected net (CU)": "-"})
+    sc = D.mart("campaign_scenarios")
+    roll = sc[sc.role == "Rollout"].set_index("scenario")["net_profit_cu"]
+    note = (f"Expected net: 90-day net profit under base-case planning assumptions, not a measurement. Rollout total "
+            f"{_k(roll['Base'])} CU (pessimistic {_k(roll['Pessimistic'])}, optimistic {_k(roll['Optimistic'])}). "
+            "Category focus: the categories the audience over-indexes on; the number in brackets compares the category's share "
+            "of the audience's spend with its share for all customers (100 = average, 126 = 26% higher).")
+    return _md(pd.DataFrame(rows)) + "\n\n" + note
 
 
 def t_campaign_economics() -> str:
@@ -203,11 +235,33 @@ def t_threshold_sensitivity() -> str:
     return _md(piv.map(lambda v: f"{100 * v:+.0f}%").reset_index().rename(columns={"segment": "Segment"}))
 
 
+STEP_LABELS = {
+    "link": "point data/raw at the H&M files",
+    "stage": "CSV to Parquet with DuckDB (31.8M rows)",
+    "dq": "23 data-quality checks",
+    "marts": "clean facts, RFM at three dates, backtests, profiles (SQL 02-12, 14)",
+    "reconcile": "19 reconciliation checks",
+    "analysis": "do-nothing projection, campaign economics, K-Means check, metrics",
+    "figures": "16 PNG charts",
+    "report": "report.html and action_plan.html",
+    "notebooks": "execute notebooks 01-04 and export to HTML",
+}
+_RUN_TIMINGS: dict[str, float] | None = None   # set by update_all() during a full run
+
+
 def t_run_timings() -> str:
-    t = D.metrics().get("timings_s", {})
-    keys = [k for k in t if k.startswith("step:")]
-    df = pd.DataFrame({"Step": [k.split(":", 1)[1] for k in keys], "Seconds": [f"{t[k]:.1f}" for k in keys]})
-    return _md(df)
+    """Step timings of one full run: the run in progress, else the last full run in reports/run_log.json."""
+    if _RUN_TIMINGS is not None:
+        t = _RUN_TIMINGS
+    else:
+        path = ROOT / "reports" / "run_log.json"
+        log_ = json.loads(path.read_text()) if path.exists() else {}
+        t = log_.get("last_full_run", {}).get("timings_s") or log_.get("timings_s", {})
+    rows = [{"Step": k, "What it does": label, "Seconds": f"{t[f'step:{k}']:.1f}"}
+            for k, label in STEP_LABELS.items() if f"step:{k}" in t]
+    total = sum(t[f"step:{k}"] for k in STEP_LABELS if f"step:{k}" in t)
+    rows.append({"Step": "**Total**", "What it does": "plus under a second to regenerate the doc tables", "Seconds": f"**{total:.1f}**"})
+    return _md(pd.DataFrame(rows))
 
 
 TABLES: dict[str, Callable[[], str]] = {
@@ -241,12 +295,15 @@ def render(text: str, cache: dict[str, str]) -> tuple[str, list[str]]:
         if name not in cache:
             cache[name] = TABLES[name]()
         used.append(name)
-        return f"{m.group(1)}\n{cache[name]}\n\n<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>\n{m.group(4)}"
+        return (f"{m.group(1)}\n<!-- generated by `python run.py --steps docs` from the pipeline outputs; "
+                f"edit src/rfm/docgen.py, not this block -->\n\n{cache[name]}\n\n{m.group(4)}")
 
     return _BLOCK.sub(repl, text), used
 
 
-def update_all(log: Callable[[str], None] = print) -> None:
+def update_all(log: Callable[[str], None] = print, run_timings: dict[str, float] | None = None) -> None:
+    global _RUN_TIMINGS
+    _RUN_TIMINGS = dict(run_timings) if run_timings else None
     files = sorted(get_paths().docs.glob("*.md")) + [ROOT / "README.md"]
     cache: dict[str, str] = {}
     for f in files:

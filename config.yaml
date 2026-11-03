@@ -48,7 +48,7 @@ kmeans:
   stability_seeds: [1, 2, 3, 4, 5]
 
 economics:                       # planning assumptions for the campaign model (all adjustable in the dashboard)
-  gross_margin: 0.50             # H&M group gross margin: FY2020 50.0%, FY2019 52.6% (full-year reports)
+  gross_margin: 0.50             # H&M group gross margin: FY2019 52.6% (full-year report), H1 2020 49.4% (six-month report, June 2020)
   contribution_margin: 0.40      # base case for incremental orders: gross margin less ~10 pp fulfilment and returns
                                  # (no returns data in this file; to be confirmed with Finance)
   incremental_value: one_order   # value of an incremental buyer: one_order = one order at the audience AOV (base);

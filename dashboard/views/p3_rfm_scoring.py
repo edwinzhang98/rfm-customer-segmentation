@@ -21,7 +21,7 @@ chart(C.return_curve(curve, snap), data=curve[curve.snapshot_name == snap][
     ["frequency_group", "recency_bucket_start", "recency_bucket_end", "customers", "return_rate_90d"]], key="curve")
 st.markdown(
     "The curve falls smoothly (about 4-5 points every 15 days for repeat buyers) with no cliff, so it supports recency as the main "
-    "axis but does not pick the cut-offs. The cut-offs are chosen as round numbers close to the quintiles (section 2) that match how the "
+    "axis but does not pick the cut-offs. The cut-offs are set near the quintiles (section 2) and moved to periods that match how the "
     "CRM team works: **30 / 60 days** (a normal purchase cycle for good customers), **120 days** (a season missed), **180 days** "
     "(two seasons) and **365 days** (a full year without buying = Lost, the standard 12-month-active definition). At 120 days, "
     "repeat buyers still come back at about 43%, which is why the 61-120-day groups get a cheap nudge, not a win-back offer."
@@ -47,7 +47,7 @@ business = {"recency_days": "30 / 60 / 120 / 180 (365+ = Lost)", "frequency_12m"
             "monetary_12m_cu": "50 / 100 / 200 / 400"}
 table(C.quantile_vs_business(edges, business), hide_index=True, width="stretch")
 st.markdown(
-    "**Why fixed thresholds.** Recency and Monetary cut-offs are the active-customer quintiles rounded to numbers people can say out loud "
+    "**Why fixed thresholds.** Recency and Monetary cut-offs are set near the active-customer quintiles, then moved to business periods and round amounts "
     f"(R {' / '.join(f'{v:.0f}' for v in edges['recency_days'])} days -> 30 / 60 / 120 / 180; "
     f"M {' / '.join(f'{v:.0f}' for v in edges['monetary_12m_cu'])} CU -> 50 / 100 / 200 / 400). Frequency is set by hand, because "
     f"{pct((active.frequency_12m == 1).mean(), 0)} of active customers have exactly one order and {pct((active.frequency_12m == 2).mean(), 0)} two, "

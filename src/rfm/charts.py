@@ -573,8 +573,12 @@ def start_static_export() -> None:
     """Start one persistent headless browser for PNG export (much faster and more stable than one per figure)."""
     global _SERVER_STARTED
     if not _SERVER_STARTED:
+        import warnings
+
         import kaleido
 
+        # plotly passes export options that the persistent server ignores; the warning is noise
+        warnings.filterwarnings("ignore", message="The kopts argument is ignored")
         kaleido.start_sync_server(silence_warnings=True)
         _SERVER_STARTED = True
 

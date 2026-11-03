@@ -37,6 +37,9 @@ MART_SQL = (
 )
 
 
+FULL_RUN = False   # set in main(): True when every step runs, in order
+
+
 def log(message: str) -> None:
     print(message, flush=True)
 
@@ -132,7 +135,8 @@ def step_docs(timings: dict) -> None:
     """Refresh the generated tables inside docs/*.md and README.md."""
     from rfm import docgen
 
-    docgen.update_all(log=log)
+    # in a full run the timings table shows this run; otherwise the last full run in reports/run_log.json
+    docgen.update_all(log=log, run_timings=timings if FULL_RUN else None)
 
 
 def step_notebooks(timings: dict) -> None:
@@ -151,8 +155,8 @@ STEPS = {
     "analysis": step_analysis,
     "figures": step_figures,
     "report": step_report,
-    "docs": step_docs,
     "notebooks": step_notebooks,
+    "docs": step_docs,
 }
 
 
@@ -172,6 +176,8 @@ def main() -> None:
     if unknown:
         sys.exit(f"Unknown step(s): {unknown}. Use --list.")
 
+    global FULL_RUN
+    FULL_RUN = selected == list(STEPS)
     timings: dict[str, float] = {}
     started = time.perf_counter()
     for name in selected:
@@ -187,6 +193,8 @@ def main() -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     previous = json.loads(log_path.read_text()) if log_path.exists() else {}
     previous.setdefault("timings_s", {}).update(timings)
+    if FULL_RUN:
+        previous["last_full_run"] = {"timings_s": {k: v for k, v in timings.items() if k.startswith("step:")}, "total_s": total}
     previous["last_run"] = {
         "steps": selected,
         "total_s": total,

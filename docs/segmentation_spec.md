@@ -84,7 +84,7 @@ Variables: `r5/r4/r3/r2_max_days` = 30 / 60 / 120 / 180, `lookback_days` = 365, 
 
 **Why these cut-offs.**
 
-- **Recency and Monetary are the active-customer quintiles, rounded to numbers people can say out loud.** Recency quintile edges are 23 / 60 / 112 / 215 days; we use 30 / 60 / 120 / 180 (a monthly cycle, two months, a season missed, two seasons), and 365+ days is Lost, the usual 12-month-active definition. Monetary quintile edges are 40 / 85 / 166 / 352 CU; we use 50 / 100 / 200 / 400.
+- **Recency and Monetary cut-offs are set near the active-customer quintiles, then moved to business periods and round amounts.** Recency quintile edges are 23 / 60 / 112 / 215 days; we use 30 / 60 / 120 / 180 (a monthly cycle, two months, a season missed, two seasons), and 365+ days is Lost, the usual 12-month-active definition. Monetary quintile edges are 40 / 85 / 166 / 352 CU; we use 50 / 100 / 200 / 400.
 - **Frequency is set by hand.** 34% of active customers have exactly one order and 16% have two, so the quintile edges tie (1 / 2 / 3 / 7 orders) and would split identical customers at random.
 - **The numbers are fixed, not refitted.** Quintile edges move every month with the customer base. Fixed thresholds mean "R5" or "Champions" stands for the same customers in October as in September, so audiences, journeys and month-on-month comparisons stay meaningful.
 - **What the recency curve shows, and what it does not.** In the 2019 backtest the share of repeat buyers who came back within 90 days falls smoothly, from about 78% for those who had just bought to about 12% after a year without an order, with no cliff. That supports recency as the main axis of the segmentation; it does not prove where the lines must be. At 120 days repeat buyers still come back at about 43%, which is why the 61-120-day groups get a cheap nudge rather than a win-back offer.
@@ -119,21 +119,24 @@ The order of the lines is part of the definition:
 6. By the **At Risk** line only customers 121-364 days quiet are left (R = 1 or 2); At Risk are those who used to buy often (3+ orders) or a lot (200+ CU). **Hibernating** is the rest: 1-2 orders and under 200 CU.
 
 <!-- BEGIN:segment_summary -->
-| Segment             | Rule (scores)                                                                                 | In plain words                                                                             | Customers     | % customers   | % 12m revenue   | AOV (CU)   | Orders / 12m   | Email reach   |
-|:--------------------|:----------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------|:--------------|:--------------|:----------------|:-----------|:---------------|:--------------|
-| Champions           | R >= 4 and F >= 4 and M >= 4                                                                  | Bought in the last 60 days, 5+ orders and 200+ CU in the last 12 months                    | 190,320       | 14.0%         | 54.1%           | 58.7       | 12.0           | 47%           |
-| Loyal               | R >= 4 and F >= 4 (remaining)                                                                 | Bought in the last 60 days, 5+ orders in 12 months, under 200 CU (frequent, small baskets) | 33,612        | 2.5%          | 2.0%            | 23.8       | 6.2            | 48%           |
-| Slipping Regulars   | R = 3 and F >= 4                                                                              | 5+ orders in 12 months, but no order in the last 61-120 days                               | 61,655        | 4.5%          | 10.4%           | 55.1       | 7.5            | 44%           |
-| Potential Loyalists | R >= 4 (remaining)                                                                            | Bought in the last 60 days, 1-4 orders in 12 months (not new)                              | 124,517       | 9.1%          | 7.8%            | 56.8       | 2.7            | 38%           |
-| New Customers       | tenure < 90 days                                                                              | First order within the last 90 days                                                        | 71,117        | 5.2%          | 2.0%            | 51.6       | 1.3            | 33%           |
-| Needs Attention     | R = 3 (remaining)                                                                             | Last order 61-120 days ago, 1-4 orders in 12 months                                        | 137,675       | 10.1%         | 7.1%            | 56.6       | 2.3            | 37%           |
-| At Risk             | R <= 2 and (F >= 3 or M >= 4)                                                                 | Last order 121-364 days ago but used to buy often (3+ orders) or a lot (200+ CU)           | 89,848        | 6.6%          | 9.5%            | 69.5       | 3.7            | 35%           |
-| Hibernating         | R <= 2 (remaining)                                                                            | Last order 121-364 days ago, 1-2 orders and under 200 CU                                   | 284,069       | 20.9%         | 6.6%            | 46.6       | 1.2            | 29%           |
-| Lost                | recency >= 365 days                                                                           | No order in the last 365 days                                                              | 368,604       | 27.1%         | 0.0%            | 55.4       | 0.0            | 29%           |
-| Review List         | >= 20 units of one article in an order, >= 100 units in an order, or purchases on >= 150 days | Bulk or near-daily buying pattern: no offers or paid media until reviewed                  | 864           | 0.1%          | 0.5%            | 64.9       | 22.8           | 37%           |
-| **Total**           |                                                                                               | all customers with an order 2018-09-20 to 2020-09-22                                       | **1,362,281** | **100.0%**    | **100.0%**      |            |                |               |
+<!-- generated by `python run.py --steps docs` from the pipeline outputs; edit src/rfm/docgen.py, not this block -->
 
-<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>
+| Segment             | Rule (scores)                                                                                 | In plain words                                                                             | Customers     | % customers   | % 12m revenue   | AOV (CU)   | Orders / 12m   | Days between orders   | Main categories (share of spend)                      | Email reach   |
+|:--------------------|:----------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------|:--------------|:--------------|:----------------|:-----------|:---------------|:----------------------|:------------------------------------------------------|:--------------|
+| Champions           | R >= 4 and F >= 4 and M >= 4                                                                  | Bought in the last 60 days, 5+ orders and 200+ CU in the last 12 months                    | 190,320       | 14.0%         | 54.1%           | 58.7       | 12.0           | 33                    | Jersey Fancy 14%, Trousers 11%, Dresses Ladies 9%     | 47%           |
+| Loyal               | R >= 4 and F >= 4 (remaining)                                                                 | Bought in the last 60 days, 5+ orders in 12 months, under 200 CU (frequent, small baskets) | 33,612        | 2.5%          | 2.0%            | 23.8       | 6.2            | 53                    | Jersey Fancy 15%, Under-, Nightwear 11%, Trousers 10% | 48%           |
+| Slipping Regulars   | R = 3 and F >= 4                                                                              | 5+ orders in 12 months, but no order in the last 61-120 days                               | 61,655        | 4.5%          | 10.4%           | 55.1       | 7.5            | 40                    | Jersey Fancy 14%, Trousers 11%, Dresses Ladies 9%     | 44%           |
+| Potential Loyalists | R >= 4 (remaining)                                                                            | Bought in the last 60 days, 1-4 orders in 12 months (not new)                              | 124,517       | 9.1%          | 7.8%            | 56.8       | 2.7            | 98                    | Jersey Fancy 15%, Trousers 12%, Under-, Nightwear 9%  | 38%           |
+| New Customers       | tenure < 90 days                                                                              | First order within the last 90 days                                                        | 71,117        | 5.2%          | 2.0%            | 51.6       | 1.3            | 11                    | Jersey Fancy 15%, Trousers 12%, Swimwear 8%           | 33%           |
+| Needs Attention     | R = 3 (remaining)                                                                             | Last order 61-120 days ago, 1-4 orders in 12 months                                        | 137,675       | 10.1%         | 7.1%            | 56.6       | 2.3            | 80                    | Jersey Fancy 14%, Trousers 11%, Swimwear 11%          | 37%           |
+| At Risk             | R <= 2 and (F >= 3 or M >= 4)                                                                 | Last order 121-364 days ago but used to buy often (3+ orders) or a lot (200+ CU)           | 89,848        | 6.6%          | 9.5%            | 69.5       | 3.7            | 38                    | Jersey Fancy 13%, Trousers 12%, Knitwear 11%          | 35%           |
+| Hibernating         | R <= 2 (remaining)                                                                            | Last order 121-364 days ago, 1-2 orders and under 200 CU                                   | 284,069       | 20.9%         | 6.6%            | 46.6       | 1.2            | 40                    | Jersey Fancy 14%, Trousers 12%, Under-, Nightwear 10% | 29%           |
+| Lost                | recency >= 365 days                                                                           | No order in the last 365 days                                                              | 368,604       | 27.1%         | 0.0%            | 55.4       | 0.0            | -                     | Jersey Fancy 15%, Trousers 11%, Knitwear 9%           | 29%           |
+| Review List         | >= 20 units of one article in an order, >= 100 units in an order, or purchases on >= 150 days | Bulk or near-daily buying pattern: no offers or paid media until reviewed                  | 864           | 0.1%          | 0.5%            | 64.9       | 22.8           | 21                    | Jersey Fancy 13%, Dresses Ladies 11%, Blouses 11%     | 37%           |
+| **Total**           |                                                                                               | all customers with an order 2018-09-20 to 2020-09-22                                       | **1,362,281** | **100.0%**    | **100.0%**      |            |                |                       |                                                       |               |
+
+Days between orders: median of each customer's average gap between orders in the 12 months, customers with 2+ orders only (for lapsed segments, the gap while they were still buying). Main categories: the three garment groups with the largest share of the segment's spend (12 months; two years for Lost). The largest categories are similar in every segment; what sets a segment apart is the category it over-indexes on, which the campaign uses as its category focus.
+
 <!-- END:segment_summary -->
 
 AOV = 12-month revenue / 12-month orders (two-year AOV for Lost). Email reach = share of the segment on the newsletter.
@@ -143,6 +146,8 @@ AOV = 12-month revenue / 12-month orders (two-year AOV for Lost). Email reach = 
 A rebuild on the 2020-09-22 snapshot must match these numbers exactly. The totals tie back to the source files: 1,362,281 customers with an order plus 9,699 registered customers with no order in the window equals the 1,371,980 rows of `customers.csv`, and 12-month and two-year revenue match the order table to the cent (`sql/13_reconciliation_checks.sql`, 19 of 19 checks pass).
 
 <!-- BEGIN:segment_counts -->
+<!-- generated by `python run.py --steps docs` from the pipeline outputs; edit src/rfm/docgen.py, not this block -->
+
 | Segment                                         | Customers     | 12-month revenue (CU)   | Two-year revenue (CU)   |
 |:------------------------------------------------|:--------------|:------------------------|:------------------------|
 | Champions                                       | 190,320       | 133,882,338             | 252,123,399             |
@@ -159,7 +164,6 @@ A rebuild on the 2020-09-22 snapshot must match these numbers exactly. The total
 | Registered, no order in the window (not scored) | 9,699         | 0                       | 0                       |
 | **All customers in customers.csv**              | **1,371,980** |                         |                         |
 
-<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>
 <!-- END:segment_counts -->
 
 If a rebuild does not match, check the two usual suspects first: the 12-month window (`snapshot_date - order_date < 365`, so it starts on 2019-09-24; "the same date last year" or `<= 365` adds a day or two because of the leap day), and the order definition (customer × day × channel, not transaction rows or receipts).
@@ -179,6 +183,8 @@ VIP = 1,000+ CU in 12 months, High = 400-999, Mid = 200-399, Low = under 200, No
 The lifecycle segment says what to do; the tier says how much effort a customer is worth. Within At Risk it decides paid reach (paid social and the offer test only for customers 181-364 days quiet with 200+ CU, i.e. Mid tier and above), and everywhere it keeps high spenders visible wherever their lifecycle puts them: the 41,118 VIPs (3% of customers) bring in 27.9% of 12-month revenue; 35,366 of them are Champions, but 3,546 are Slipping Regulars and 1,230 At Risk.
 
 <!-- BEGIN:value_grid -->
+<!-- generated by `python run.py --steps docs` from the pipeline outputs; edit src/rfm/docgen.py, not this block -->
+
 | Segment                   | VIP (1,000+ CU)   | High (400-999)   | Mid (200-399)   | Low (< 200)   | None (no 12m spend)   |
 |:--------------------------|:------------------|:-----------------|:----------------|:--------------|:----------------------|
 | Champions                 | 35,366            | 84,627           | 70,327          | 0             | 0                     |
@@ -193,7 +199,6 @@ The lifecycle segment says what to do; the tier says how much effort a customer 
 | Review List               | 301               | 163              | 88              | 127           | 185                   |
 | **% of 12-month revenue** | **27.9%**         | **31.9%**        | **19.9%**       | **20.3%**     | **0.0%**              |
 
-<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>
 <!-- END:value_grid -->
 
 ## 7. Channel profile (12 months)
@@ -214,6 +219,8 @@ Channel decides the **message**, not the budget: the creative rules per channel 
 Audiences are segments, or slices of a segment where the economics differ. At Risk is split three ways: 44% of the 121-180-day group buy again within 90 days on their own, against 26-28% of the 181-364-day groups, and only the 181-364-day customers with 200+ CU are worth paying to reach.
 
 <!-- BEGIN:audience_spec -->
+<!-- generated by `python run.py --steps docs` from the pipeline outputs; edit src/rfm/docgen.py, not this block -->
+
 | Audience                        | Rule                                                                          | Customers   | Reachable                      | AOV (CU)   | Buy again within 90 days, BAU (2019 / 2020 backtest)   |
 |:--------------------------------|:------------------------------------------------------------------------------|:------------|:-------------------------------|:-----------|:-------------------------------------------------------|
 | Champions                       | segment = Champions                                                           | 190,320     | email only (47%)               | 58.7       | 83.2% / 82.4%                                          |
@@ -225,14 +232,14 @@ Audiences are segments, or slices of a segment where the economics differ. At Ri
 | At Risk, 121-180 days           | segment = At Risk and R score = 2 (121-180 days)                              | 42,394      | email only (34%)               | 71.2       | 43.9% / 49.2%                                          |
 | At Risk, 181-364 days, 200+ CU  | segment = At Risk and R score = 1 (181-364 days) and 12-month spend >= 200 CU | 23,960      | everyone (email + paid social) | 104.7      | 26.5% / 32.3%                                          |
 | At Risk, 181-364 days, < 200 CU | segment = At Risk and R score = 1 and 12-month spend < 200 CU                 | 23,494      | email only (39%)               | 32.1       | 28.3% / 37.2%                                          |
+| Hibernating                     | segment = Hibernating                                                         | 284,069     | email only (29%)               | 46.6       | 13.7% / 17.5%                                          |
 | Lost                            | segment = Lost                                                                | 368,604     | email only (29%)               | 55.4       | 9.9% / 7.1%                                            |
 
-<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>
 <!-- END:audience_spec -->
 
 - **Reachable** defines the experiment population. For email-only audiences it is the newsletter subscribers; non-subscribers in those audiences get no campaign contact this wave and are outside the read. The two audiences with paid social (New Customers; At Risk 181-364 days, 200+ CU) include everyone: subscribers by email, non-subscribers by paid social.
 - **Buy again within 90 days** is what look-alike customers did with business-as-usual contact only, at the same rule applied on 2019-09-22 (same season, the base case) and 2020-06-24. For Lost the 2020 figure is used: the 2019 backtest has only 3,144 Lost customers because the data starts a year earlier.
-- **No autumn audience:** Hibernating (284,069 customers) and the Review List (864).
+- **No autumn audience:** the Review List (864 accounts), until it is reviewed.
 - **Applied after the rule, before the holdout split:** remove unsubscribed and bounced addresses and customers in another live test. The split itself is in the [measurement plan](measurement_plan.md#3-randomisation).
 - **Variants inside an audience** (creative only, no effect on the split): Needs Attention customers with one order in 12 months (`frequency_12m = 1`) get the second-order version of the email; Potential Loyalists who came back after 12+ months away get a "welcome back" version. The mart has no "days between the last two orders" field yet, so for this wave use "segment on 2020-06-24 = Lost" (14,619 customers in the migration table); from next month the segment history table (section 9) provides it.
 
@@ -251,8 +258,9 @@ SELECT
         WHEN segment = 'At Risk' AND r_score = 2                            THEN 'at_risk_121_180'
         WHEN segment = 'At Risk' AND r_score = 1 AND monetary_12m_cu >= 200 THEN 'at_risk_181_364_high'
         WHEN segment = 'At Risk' AND r_score = 1                            THEN 'at_risk_181_364_low'
+        WHEN segment = 'Hibernating'                                        THEN 'hibernating'
         WHEN segment = 'Lost'                                               THEN 'lost'
-    END AS audience,                  -- NULL = Hibernating or Review List: no autumn audience
+    END AS audience,                  -- NULL = Review List: no autumn audience until reviewed
     segment, value_tier, channel_12m, is_newsletter_subscriber,
     recency_days, frequency_12m, monetary_12m_cu
 FROM 'data/marts/customer_rfm.parquet'
@@ -296,6 +304,8 @@ Both alert levels sit just outside the one quarter we can observe, and that quar
 Segment sizes when one group of cut-offs moves by 25% (recency +25% = 38 / 75 / 150 / 225 days; frequency −25% = 2 / 4 / 8 orders for F3 / F4 / F5; monetary ±25% = all four money cut-offs scaled), everything else unchanged. Lost, New Customers and the Review List do not depend on these cut-offs and are not shown.
 
 <!-- BEGIN:threshold_sensitivity -->
+<!-- generated by `python run.py --steps docs` from the pipeline outputs; edit src/rfm/docgen.py, not this block -->
+
 | Segment             | Frequency cut-offs +25%   | Frequency cut-offs -25%   | Monetary cut-offs +25%   | Monetary cut-offs -25%   | Recency cut-offs +25%   | Recency cut-offs -25%   |
 |:--------------------|:--------------------------|:--------------------------|:-------------------------|:-------------------------|:------------------------|:------------------------|
 | Champions           | -9%                       | +8%                       | -10%                     | +9%                      | +9%                     | -13%                    |
@@ -306,7 +316,6 @@ Segment sizes when one group of cut-offs moves by 25% (recency +25% = 38 / 75 / 
 | At Risk             | -27%                      | +73%                      | -8%                      | +16%                     | -27%                    | +53%                    |
 | Hibernating         | +9%                       | -23%                      | +2%                      | -5%                      | -13%                    | +16%                    |
 
-<sub>Generated from the pipeline outputs by `python run.py --steps docs`; do not edit by hand.</sub>
 <!-- END:threshold_sensitivity -->
 
 Champions move by 13% at most. Segments whose borders are only a few orders wide move much more: At Risk grows by 73% when "used to buy often" starts at 2 orders instead of 3, and Loyal swings with every money cut-off. Segment sizes depend on where the lines are drawn, which is why the thresholds are frozen and changed only through this process:

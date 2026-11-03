@@ -3,6 +3,7 @@ import streamlit as st
 
 from common import callout, chart, fmt_cu, fmt_n, how_to_read, mart, metrics, page_header, pct, table
 from rfm import campaign as CP
+from rfm.data import fmt_k
 from rfm import charts as C
 from rfm.segments import SEGMENT_INFO, SEGMENT_ORDER
 
@@ -32,14 +33,15 @@ st.markdown(
     f"""
 1. **High value is concentrated, and it does not need discounts.** Champions are {pct(h['champions_pct_customers'], 0)} of customers and
    {pct(h['champions_pct_revenue_12m'], 0)} of 12-month revenue; the {fmt_n(h['vip_customers'])} VIPs (1,000+ CU a year) alone bring in
-   {pct(h['vip_pct_revenue_12m'], 0)}. {pct(seg['Champions']['repurchase_rate_90d_base'], 0)} of Champions buy again within 90 days without any
-   campaign, so the plan protects them with early access and service, not coupons.
+   {pct(h['vip_pct_revenue_12m'], 0)}. {pct(seg['Champions']['repurchase_rate_90d_base'], 0)} of Champions buy again within 90 days with business-as-usual
+   contact only, so the plan protects them with early access and service, not coupons.
 2. **Two groups are drifting away: {fmt_n(h['at_risk_customers'])} At Risk customers and {fmt_n(h['slipping_customers'])} Slipping Regulars.**
-   At Risk used to buy often or a lot and has been quiet for 4-12 months: left alone they spend about {fmt_cu(h['at_risk_expected_90d_cu'])} in the
-   next 90 days instead of {fmt_cu(h['at_risk_run_rate_90d_cu'])} at their usual pace, and {fmt_n(h['at_risk_non_buyers_90d'])} of them will not buy
-   at all. Slipping Regulars are frequent buyers already 61-120 days quiet ({pct(h['slipping_pct_revenue_12m'], 0)} of revenue, gap about
-   {fmt_cu(h['slipping_gap_90d_cu'])}). Much of this gap is natural slowdown that no email reverses: the plan expects to win back about
-   {fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk ({fmt_cu(h['at_risk_addressable_content_90d_cu'])} of it from content emails), and measures it.
+   At Risk used to buy often or a lot and has been quiet for 4-12 months: left alone they are expected to spend about
+   {fmt_cu(h['at_risk_expected_90d_cu'])} in the next 90 days instead of {fmt_cu(h['at_risk_run_rate_90d_cu'])} at their usual pace, and about
+   {h['at_risk_non_buyers_90d'] / 1000:.0f}K of them ({pct(h['at_risk_non_buyers_90d'] / h['at_risk_customers'], 0)}) are expected not to buy at all. Slipping Regulars are frequent buyers already 61-120 days quiet ({pct(h['slipping_pct_revenue_12m'], 0)} of revenue, gap about
+   {fmt_cu(h['slipping_gap_90d_cu'])}). Much of this gap is natural slowdown that no email reverses: the plan expects about
+   {fmt_cu(h['at_risk_addressable_90d_cu'])} of incremental revenue from At Risk ({fmt_cu(h['at_risk_addressable_content_90d_cu'])} of it from content
+   emails, the rest from a 10% offer test cell that is expected to lose money on its own), and measures it.
 3. **Online-only shoppers are not a problem to fix.** {fmt_n(h['online_only_active_customers'])} active customers ({pct(h['pct_online_only_active'], 0)})
    had no identified store purchase in the last 12 months. Online baskets are about twice the size of store baskets
    ({h['aov_online_order_omni']:.0f} vs {h['aov_store_order_omni']:.0f} CU for the same omnichannel customers), but online-only customers come back
@@ -50,9 +52,9 @@ st.markdown(
 callout(
     f"<b>Recommended autumn plan:</b> content-led actions for every segment that is worth contacting (cost {fmt_cu(sc['Base | Rollout']['total_cost_cu'])}); "
     f"discounts only in two test cells sized to tell whether they pay (10% off a New Customer's second order; 10% off for long-lapsed high-value At Risk); "
-    f"no spend on Hibernating or the Review List. <b>Budget ask {fmt_cu(camp['budget_total_cu'])}</b>. "
-    f"Expected net of the rollout: <b>{fmt_cu(sc['Base | Rollout']['net_profit_cu'])}</b> (pessimistic {fmt_cu(sc['Pessimistic | Rollout']['net_profit_cu'])}, "
-    f"optimistic {fmt_cu(sc['Optimistic | Rollout']['net_profit_cu'])}); the test cells are expected to cost {fmt_cu(-camp['test_cells_net_profit_cu'])} "
+    f"one low-cost email each for Hibernating and Lost; no offers to the Review List until reviewed. <b>Budget ask {fmt_cu(camp['budget_total_cu'])}</b>. "
+    f"Expected net of the rollout on planning assumptions: <b>{fmt_k(sc['Base | Rollout']['net_profit_cu'])} CU</b> "
+    f"(pessimistic {fmt_k(sc['Pessimistic | Rollout']['net_profit_cu'])}, optimistic {fmt_k(sc['Optimistic | Rollout']['net_profit_cu'])}); the test cells are expected to cost {fmt_cu(-camp['test_cells_net_profit_cu'])} "
     f"to learn from. Measured against a 10% holdout in every audience (campaign-wide lift detectable from {camp['pooled_read']['mde_rate_pp']:.2f} pp)."
 )
 
@@ -78,11 +80,11 @@ for s in SEGMENT_ORDER:
         "% customers": round(100 * p["pct_customers"], 1),
         "% 12m revenue": round(100 * p["pct_revenue_12m"], 1),
         "Autumn action": action,
-        "Expected net (CU, base)": None if arms.empty else round(float(arms.net_profit_cu.sum())),
+        "Expected net (CU, planning)": "-" if arms.empty else "; ".join(
+            f"{fmt_k(g.net_profit_cu.sum())}{' test cell' if role == 'Test cell' else ''}" for role, g in arms.groupby("role", sort=True)),
     })
 table(pd.DataFrame(rows), hide_index=True, width="stretch",
              column_config={"Customers": st.column_config.NumberColumn(format="%d"),
-                            "Expected net (CU, base)": st.column_config.NumberColumn(format="%d"),
                             "Autumn action": st.column_config.TextColumn(width="large"),
                             "Who (plain language)": st.column_config.TextColumn(width="medium")})
 
