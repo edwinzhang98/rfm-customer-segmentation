@@ -45,7 +45,9 @@ def at_repo_root():
 
 
 def connect() -> duckdb.DuckDBPyConnection:
-    return duckdb.connect()
+    con = duckdb.connect()
+    con.execute("SET enable_progress_bar = false")  # no progress widgets in notebooks / logs
+    return con
 
 
 def run_sql_file(

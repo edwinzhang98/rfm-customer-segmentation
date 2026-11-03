@@ -16,7 +16,7 @@ Standard outputs for this kind of request on our team: segmentation rule documen
 |---|---|---|---|
 | Q1 | Who is high value and must be retained? | Which customers bought recently, often and for a high amount in the 12 months to 2020-09-22, and what share of revenue do they drive? | Champions / Loyal segment counts, revenue share, profile |
 | Q2 | Who is about to churn and worth winning back? | Which previously valuable customers have stopped buying (121–364 days since last order) or are slipping (frequent buyers 61–120 days quiet), how likely are they to come back on their own within 90 days, and what will they spend in the next 90 days if we do nothing, compared with their usual pace? | At Risk / Slipping Regulars segments, 90-day do-nothing projection with scenarios, and the part a campaign can realistically win back |
-| Q3 | Who only buys online and never visits a store? | What share of each segment has *only* online orders in the full two-year window, and how do they differ in value and category from store-only and omnichannel customers? | channel overlay per segment |
+| Q3 | Who only buys online and never visits a store? | What share of each segment had *only* online orders in the last 12 months (operational definition; the two-year view is context), and do they differ in value and behaviour from store-only and omnichannel customers at the same order frequency? | channel audience per segment and a channel rule for every arm |
 | Q4 | What should each segment receive? | Per segment: goal, action (offer / message), timing, channel, category focus, expected lift, cost and the lift needed to break even | campaign plan table |
 | Q5 | How do we measure the campaign? | Randomised holdout per segment: size, primary KPI, minimum detectable effect, read-out dates | measurement plan |
 
@@ -39,7 +39,7 @@ Standard outputs for this kind of request on our team: segmentation rule documen
 
 **In scope:** customers with at least one purchase between 2018-09-20 and 2020-09-22 (1,362,281); RFM as of 2020-09-22; segment rules a CRM tool can apply; 90-day counterfactual; campaign plan and holdout design; cohorts by first-purchase month.
 
-**Out of scope (and why):** product recommendations per customer (different problem, Kaggle competition's original task); predicted CLV models (rules + backtest are enough for this decision); price elasticity (no list-price vs paid-price data); store-level planning (no store ID).
+**Out of scope (and why):** product recommendations per customer (a different problem, and the dataset's original purpose); predicted CLV models (rules + backtest are enough for this decision); price elasticity (no list-price vs paid-price data); store-level planning (no store ID).
 
 ## Data limitations the CRM Manager should know up front
 

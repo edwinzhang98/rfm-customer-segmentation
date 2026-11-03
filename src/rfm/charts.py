@@ -204,7 +204,7 @@ def rf_heatmap(grid: pd.DataFrame, value: str = "customers") -> go.Figure:
                                xgap=2, ygap=2, colorbar=dict(title=dict(text="customers" if value == "customers" else "CU", side="right"), thickness=10),
                                hovertemplate="%{y} x %{x}<br>%{z:,.0f}<extra></extra>"))
     fig.update_layout(xaxis=dict(title="Frequency score (orders in 12 months)", showline=False, side="bottom"),
-                      yaxis=dict(title="Recency score", autorange=True), plot_bgcolor=SURFACE)
+                      yaxis=dict(title="Recency score", autorange="reversed"), plot_bgcolor=SURFACE)
     what = "customers" if value == "customers" else "12-month revenue"
     return _finish(fig, f"Where the {what} sit on the Recency x Frequency grid",
                    "12-month-active customers; R5 = bought in the last 30 days, F5 = 10+ orders", 420)
@@ -488,7 +488,8 @@ def ltv_curves(coh: pd.DataFrame, first_cohort: str = "2019-01-01", last_cohort:
     fig.update_layout(xaxis=dict(title="Months after the first-order month", dtick=1),
                       yaxis=dict(title="Cumulative revenue per customer (CU)", rangemode="tozero"))
     end = {k: v.iloc[-1] for k, v in out.items() if len(v)}
-    return _finish(fig, f"Observed {months}-month LTV: {end.get('Online', 0):.0f} CU for online-first vs {end.get('Store', 0):.0f} CU for store-first customers",
+    return _finish(fig, f"Observed {months}-month LTV: {end.get('Both', 0):.0f} CU when the first day used both channels, "
+                        f"{end.get('Online', 0):.0f} online-first, {end.get('Store', 0):.0f} store-first",
                    f"Cohorts {first_cohort[:7]} to {last_cohort[:7]} ({months} full months of follow-up), by channel of the first order", 420)
 
 
@@ -552,14 +553,15 @@ def scenario_bars(scen: pd.DataFrame) -> go.Figure:
     for role, color in (("Rollout", BLUE), ("Test cell", ORANGE)):
         s = scen[scen.role == role].set_index("scenario").reindex(order)
         fig.add_bar(x=order, y=s["net_profit_cu"] / 1e3, name=f"{role} arms", marker_color=color,
-                    text=[f"{v / 1e3:+.0f}K" for v in s["net_profit_cu"]], textposition="outside", cliponaxis=False,
-                    textfont=dict(size=11, color=INK2),
+                    text=[(f"{v / 1e3:+.1f}K" if abs(v) < 10_000 else f"{v / 1e3:+.0f}K") for v in s["net_profit_cu"]],
+                    textposition="outside", cliponaxis=False, textfont=dict(size=11, color=INK2),
                     customdata=np.stack([s["total_cost_cu"] / 1e3, s["incremental_revenue_cu"] / 1e3], axis=-1),
                     hovertemplate="%{x}<br>net %{y:+.1f}K CU<br>cost %{customdata[0]:.1f}K<br>incremental revenue %{customdata[1]:.0f}K<extra></extra>")
     fig.add_hline(y=0, line_width=1, line_color=INK2)
     fig.update_layout(barmode="group", yaxis=dict(title="Expected 90-day net profit (thousand CU)"), xaxis=dict(title=None))
     r = scen[scen.role == "Rollout"].set_index("scenario")["net_profit_cu"]
-    return _finish(fig, f"The content-led rollout stays at or above break-even in all three scenarios ({r['Pessimistic'] / 1e3:+.0f}K to {r['Optimistic'] / 1e3:+.0f}K CU)",
+    k = lambda v: f"{v / 1e3:+.1f}K" if abs(v) < 10_000 else f"{v / 1e3:+.0f}K"  # noqa: E731
+    return _finish(fig, f"The content-led rollout stays at or above break-even in all three scenarios ({k(r['Pessimistic'])} to {k(r['Optimistic'])} CU)",
                    "Pessimistic: half the assumed lifts, 30% margin, paid social 0.60 CU; Optimistic: 1.5x lifts, 50% margin, average-buyer value", 400)
 
 

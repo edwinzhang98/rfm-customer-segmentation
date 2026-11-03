@@ -36,9 +36,10 @@ st.subheader(f"1. What {seg} bought in their last active period")
 d = mix[(mix.segment == seg) & (mix.dimension == dim) & (mix.value != "Unknown")]
 chart(C.category_affinity(mix, seg, dim), data=d[["value", "amount", "segment_share", "overall_share", "affinity_index"]]
       .rename(columns={"value": "category", "amount": "revenue (CU)"}).round(3), key=f"aff_{seg}_{dim}")
-note(f"Category focus used in the campaign (index >= 120 and >= 5% of the segment's revenue): {category_focus().get(seg, '-')}. "
-     "Window: last 12 months vs all customers' last 12 months; Lost: two years vs all customers' two years. Affinity also reflects "
-     "when a segment last bought (At Risk last bought in winter, Needs Attention in summer), so read it as 'what to show them now'.")
+note(f"Category focus for this segment (index >= 120 and >= 5% of its revenue): {category_focus().get(seg, '-')}; the campaign applies the same "
+     "rule per audience (Campaign Plan page). Window: last 12 months vs all customers' last 12 months; Lost: two years vs all customers' two years. "
+     "Affinity also reflects when a group last bought (At Risk customers quiet for 181-364 days last bought in autumn / winter, the 121-180-day "
+     "group during the spring 2020 closure, Needs Attention in summer), so read it as 'what to show them now'.")
 
 st.subheader("2. Who only buys online, and does it matter?")
 aud = mart("channel_audience")

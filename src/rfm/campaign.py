@@ -120,7 +120,7 @@ PLAN: list[Arm] = [
         "-", "Email", False, 0.10, 1.5, 0.0,
         "-", "Not run this season: break-even far above any plausible lift and the cell could not be read", "-"),
     Arm("slipping", "Purchase-cycle reminder: autumn picks", "Rollout",
-        "Early warning for valuable regulars: 5+ orders a year, now 61-120 days quiet (about 1.5 purchase cycles overdue)",
+        "Early warning for valuable regulars: 5+ orders a year, now 61-120 days quiet - typically twice their usual gap between orders",
         "'New in for autumn' picks from the categories they bought most, sent in week 1; second touch on day 10 to those who have not bought since launch. No discount.",
         "Week 1 (2020-09-28), reminder day 10",
         "Email (subscribers) + member app",
@@ -166,7 +166,7 @@ PLAN: list[Arm] = [
         "About a third come back on their own in autumn: keep it cheap"),
     Arm("at_risk_121_180", "Win-back content (email only)", "Rollout",
         "Recently lapsed valuable customers; 44% come back on their own, so no paid media",
-        "Personalised 'we picked these for you' email: knitwear and outerwear first (they last bought in winter), then their own top categories. No discount.",
+        "Personalised 'we picked these for you' email from each customer's own top categories (this group last bought during the spring 2020 store closure and has no seasonal skew). No discount.",
         "Week 1 (from 2020-09-28); reminder on day 7 to those who have not bought",
         "Email (subscribers only)",
         False, 0.0, 1.0, 0.90,
@@ -175,7 +175,7 @@ PLAN: list[Arm] = [
         "Low risk, near-zero cost"),
     Arm("at_risk_181_364_high", "Win-back content + paid social", "Rollout",
         "Long-lapsed but high-spending customers: worth paying to reach the ~70% not on email",
-        "Same win-back message; paid-social retargeting to non-subscribers with the knitwear / outerwear creative. No discount.",
+        "Personalised win-back leading with outerwear and knitwear (they last bought in autumn / winter 2019-20 and over-index on both); paid-social retargeting to non-subscribers with the same creative. No discount.",
         "Week 1 (from 2020-09-28); retargeting runs 3 weeks, stops for anyone who buys",
         "Email (subscribers) + paid social (non-subscribers, holdout uploaded as an exclusion audience)",
         True, 0.0, 1.0, 0.60,
@@ -198,7 +198,7 @@ PLAN: list[Arm] = [
         "-", "Not run: under one-order value it needs a lift no win-back campaign delivers", "-"),
     Arm("at_risk_181_364_low", "Win-back content (email only)", "Rollout",
         "Long-lapsed, lower-spend customers: stay present at near-zero cost",
-        "Same win-back email, lighter version; no paid media, no discount",
+        "Knitwear-led win-back email (their strongest category), lighter version; no paid media, no discount",
         "Week 1 (from 2020-09-28)",
         "Email (subscribers only)",
         False, 0.0, 0.5, 0.90,
@@ -288,7 +288,23 @@ def category_focus(n: int = 2, min_index: float = 120, min_share: float = 0.05) 
         g = g.sort_values("affinity_index", ascending=False).head(n)
         parts = [f"{v}{' dept.' if dim == 'index_group' else ''} ({i:.0f})" for v, dim, i in
                  zip(g["value"], g["dimension"], g["affinity_index"])]
-        out[seg] = ", ".join(parts) if parts else "mirrors the overall mix (no category at index >= 120)"
+        out[seg] = ", ".join(parts) if parts else FOCUS_FALLBACK
+    return pd.Series(out, name="category_focus")
+
+
+FOCUS_FALLBACK = "their own top categories (no category at index >= 120)"
+
+
+def audience_category_focus(n: int = 2, min_index: float = 120, min_share: float = 0.05) -> pd.Series:
+    """Same rule as category_focus(), per campaign audience (data/marts/audience_mix.parquet)."""
+    mix = pd.read_parquet(get_paths().marts / "audience_mix.parquet")
+    out = {}
+    for key, d in mix.groupby("audience"):
+        g = d[(d.value != "Unknown") & (d.affinity_index >= min_index) & (d.audience_share >= min_share)]
+        g = g.sort_values("affinity_index", ascending=False).head(n)
+        parts = [f"{v}{' dept.' if dim == 'index_group' else ''} ({i:.0f})" for v, dim, i in
+                 zip(g["value"], g["dimension"], g["affinity_index"])]
+        out[key] = ", ".join(parts) if parts else FOCUS_FALLBACK
     return pd.Series(out, name="category_focus")
 
 

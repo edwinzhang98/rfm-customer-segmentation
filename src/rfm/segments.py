@@ -176,10 +176,11 @@ def value_tier(df: pd.DataFrame, th: Thresholds) -> pd.Series:
 def quantile_scores(df: pd.DataFrame) -> pd.DataFrame:
     """The common textbook alternative: quintile scores (1-5) among 12-month-active customers.
 
-    Ties make this unstable: 34% of active customers have exactly one order, so the
-    frequency quintile edges collapse (pd.qcut drops duplicate edges) and customers
-    with identical behaviour can only be split by an arbitrary rank. Returned so the
-    dashboard can show the problem side by side with the business thresholds.
+    Ties break it: 34% of active customers have exactly one order, so several frequency
+    quintile edges fall on the same value. Keeping ties together (pd.qcut drops duplicate
+    edges) merges bands - F ends up with only 4 scores and the lowest holds half of the
+    customers; forcing five equal bands instead would split identical customers by an
+    arbitrary rank. Returned so the dashboard can show the problem next to the fixed thresholds.
     """
     active = df["frequency_12m"] > 0
     out = pd.DataFrame(index=df.index, data={"r_q": 0, "f_q": 0, "m_q": 0})

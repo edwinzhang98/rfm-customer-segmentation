@@ -119,14 +119,14 @@ def t_campaign_table() -> str:
 def t_campaign_short() -> str:
     """Compact version for the README and readout."""
     econ = D.mart("campaign_economics")
-    focus = CP.category_focus()
+    focus = CP.audience_category_focus()
     rows = []
     for r in econ[econ.role != "Not run"].itertuples():
         channel = ("Email + paid social" if r.use_paid_social else
                    "Email only" if "subscribers only" in r.channels.lower() else "Email + member app")
         rows.append({"Audience": r.audience_label, "Action": r.arm + (" (test cell)" if r.role == "Test cell" else ""),
                      "When": r.timing.split(";")[0], "Channel": channel,
-                     "Category focus": focus.get(r.segment, "-"),
+                     "Category focus": focus.get(r.audience, "-"),
                      "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}%",
                      "Expected net (CU)": _n(r.net_profit_cu)})
     for seg, why in CP.NO_CAMPAIGN.items():
@@ -166,7 +166,8 @@ def t_measurement() -> str:
         "Holdout": e.holdout.map(_n), "Arm size": e.contacted.map(_n), "Assumed lift (pp)": e.uplift_pp.map(lambda v: _n(v, 1)),
         "Break-even (pp)": e.breakeven_uplift_pp.map(lambda v: _n(v, 2)), "Detectable lift (pp)": e.mde_rate_pp.map(lambda v: _n(v, 2)),
         "Detectable revenue lift (CU/customer)": e.mde_revenue_cu.map(lambda v: _n(v, 1)),
-        "Readable alone": e.readable_alone.map({True: "yes", False: "no - pooled read"}),
+        "Readable alone": [("yes" if ok else ("no - decided vs its content cell" if role == "Test cell" else "no - pooled read"))
+                           for ok, role in zip(e.readable_alone, e.role)],
         "Sized for its decision": np.where(e.role == "Test cell", e.powered_for_decision.map({True: "yes", False: "no"}), "-")})
     return _md(df)
 

@@ -36,8 +36,8 @@ chart(C.order_ladder(lad), data=lad.round(3), key="ladder")
 ol = m["order_ladder"]["new: first order 2019-03-01 to 2019-09-22"]
 st.markdown(
     f"For likely new customers, {pct(ol['1'], 0)} place a second order within a year; once they have two orders, {pct(ol['2'], 0)} place a third, "
-    f"and the chance keeps rising. The first repeat purchase is the hardest step, which is why the second-order journey is the one place "
-    "where the plan rolls out a discount."
+    f"and the chance keeps rising. The first repeat purchase is the hardest step, which is why the welcome journey is always-on and why the "
+    "second-order coupon is the discount most likely to pay back - it is tested in a cell first, not rolled out."
 )
 
 how_to_read(

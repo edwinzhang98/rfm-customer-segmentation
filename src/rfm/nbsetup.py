@@ -9,6 +9,8 @@ notebooks display on GitHub and in the exported HTML without any JavaScript.
 
 from __future__ import annotations
 
+import warnings
+
 import pandas as pd
 import plotly.io as pio
 
@@ -16,6 +18,7 @@ from . import charts
 
 
 def init(width: int = 1000) -> None:
+    warnings.filterwarnings("ignore", message="The kopts argument is ignored")
     pio.renderers.default = "png"
     pio.renderers["png"].width = width
     pio.renderers["png"].scale = 1.2

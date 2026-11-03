@@ -150,10 +150,14 @@ def revenue_at_risk() -> pd.DataFrame:
     df["gap_90d_cu_low"] = gaps.min(axis=1)
     df["gap_90d_cu_high"] = gaps.max(axis=1)
     df["gap_pct_of_pace"] = df["gap_90d_cu_base"] / df["run_rate_90d_cu"]
-    df["gap_ci_lo"] = df["run_rate_90d_cu"] * (1 - df.get("realisation_ci_hi_seasonal")) - (
-        df["run_rate_90d_cu"] * (df.get("realisation_raw_seasonal") - df.get("realisation_seasonal"))).fillna(0)
-    df["gap_ci_hi"] = df["run_rate_90d_cu"] * (1 - df.get("realisation_ci_lo_seasonal")) - (
-        df["run_rate_90d_cu"] * (df.get("realisation_raw_seasonal") - df.get("realisation_seasonal"))).fillna(0)
+    # Sampling-noise interval of the base case: the delta-method CI of the raw ratio, moved onto the
+    # composition-adjusted ratio (same half-widths), taken from whichever backtest is the base.
+    def pick(col: str) -> np.ndarray:
+        return np.where(df.base_basis == "recent", df.get(f"{col}_recent"), df.get(f"{col}_seasonal")).astype(float)
+
+    shift = pick("realisation") - pick("realisation_raw")
+    df["gap_ci_lo"] = (df["run_rate_90d_cu"] * (1 - (pick("realisation_ci_hi") + shift))).where(has_pace)
+    df["gap_ci_hi"] = (df["run_rate_90d_cu"] * (1 - (pick("realisation_ci_lo") + shift))).where(has_pace)
     return df
 
 
@@ -195,10 +199,12 @@ def channel_tables(online_return_rate: float = 0.25, store_return_rate: float = 
         FROM 'data/marts/customer_outcomes_90d.parquet'
         WHERE frequency_12m > 0 AND segment <> 'Review List'
         GROUP BY ALL ORDER BY ALL""")
-    aov = query("""
+    snap = load_config()["snapshot"]
+    aov = query(f"""
         WITH cur AS (SELECT customer_id, channel_12m FROM 'data/marts/customer_rfm.parquet'
                      WHERE snapshot_name = 'current' AND frequency_12m > 0 AND NOT is_excluded),
-        o AS (SELECT * FROM 'data/marts/fct_orders.parquet' WHERE DATE '2020-09-22' - order_date < 365)
+        o AS (SELECT * FROM 'data/marts/fct_orders.parquet'
+              WHERE DATE '{snap["current"]}' - order_date < {snap["lookback_days"]})
         SELECT CASE WHEN c.channel_12m = 'Omnichannel' THEN 'Omnichannel customers' ELSE 'All customers' END AS customers_group,
                o.channel AS order_channel, COUNT(*) AS orders, SUM(o.revenue_cents) / 100.0 / COUNT(*) AS aov_cu,
                SUM(o.n_units) / COUNT(*) AS units_per_order
@@ -217,6 +223,43 @@ def channel_tables(online_return_rate: float = 0.25, store_return_rate: float = 
         WHERE snapshot_name = 'current'
         GROUP BY ALL ORDER BY ALL""")
     return {"channel_value": value, "channel_forward": forward, "channel_order_aov": aov, "channel_audience": audience}
+
+
+def audience_mix() -> pd.DataFrame:
+    """Category affinity per campaign audience, with the same windows and baselines as segment_mix, so a
+    slice such as 'At Risk, 121-180 days' gets its own creative brief instead of its segment's."""
+    import duckdb
+
+    paths, snap = get_paths(), load_config()["snapshot"]
+    cur = _marts("customer_rfm.parquet", filters=[("snapshot_name", "==", "current")],
+                 columns=["customer_id", "segment", "r_score", "monetary_12m_cu"])
+    cur["audience"] = None
+    for a in campaign.AUDIENCES:
+        cur.loc[cur.eval(a.query).to_numpy(), "audience"] = a.key
+    aud = cur.dropna(subset=["audience"])[["customer_id", "audience", "segment"]]
+    con = duckdb.connect()
+    con.execute("SET enable_progress_bar = false")
+    con.register("aud", aud)
+    df = con.execute(f"""
+        WITH lines AS (
+            SELECT a.audience, art.garment_group_name, art.index_group_name, l.line_revenue_cents
+            FROM '{paths.marts / "fct_sales_lines.parquet"}' l
+            JOIN aud a USING (customer_id)
+            JOIN '{paths.staged / "stg_articles.parquet"}' art USING (article_id)
+            WHERE a.segment = 'Lost' OR DATE '{snap["current"]}' - l.order_date < {snap["lookback_days"]}
+        )
+        SELECT audience, 'garment_group' AS dimension, garment_group_name AS value, SUM(line_revenue_cents) AS amount
+        FROM lines GROUP BY ALL
+        UNION ALL
+        SELECT audience, 'index_group', index_group_name, SUM(line_revenue_cents) FROM lines GROUP BY ALL
+    """).df()
+    df["audience_share"] = df["amount"] / df.groupby(["audience", "dimension"])["amount"].transform("sum")
+    base = _marts("segment_mix.parquet")
+    base = base[base.basis == "revenue"][["dimension", "value", "window", "overall_share"]].drop_duplicates(["dimension", "value", "window"])
+    df["window"] = np.where(df["audience"] == "lost", "2y", "12m")
+    df = df.merge(base, on=["dimension", "value", "window"], how="left")
+    df["affinity_index"] = 100 * df["audience_share"] / df["overall_share"]
+    return df
 
 
 # --------------------------------------------------------------------------- thresholds and value
@@ -487,6 +530,7 @@ def build_metrics(km: dict, rar: pd.DataFrame, econ: pd.DataFrame, scen: pd.Data
     live = econ[econ.role != "Not run"]
     roll, test = live[live.role == "Rollout"], live[live.role == "Test cell"]
     addressable = live.groupby("segment")["incremental_revenue_cu"].sum()
+    addressable_content = roll.groupby("segment")["incremental_revenue_cu"].sum()
     cv = ch["channel_value"]
     online_only_active = int(cv.loc[cv.channel == "Online only", "customers"].sum())
     aud = ch["channel_audience"]
@@ -532,6 +576,9 @@ def build_metrics(km: dict, rar: pd.DataFrame, econ: pd.DataFrame, scen: pd.Data
             "at_risk_gap_90d_cu_high": segs["At Risk"]["gap_90d_cu_high"],
             "at_risk_non_buyers_90d": segs["At Risk"]["expected_non_buyers_base"],
             "at_risk_addressable_90d_cu": _f(addressable.get("At Risk", 0), 0),
+            "at_risk_addressable_content_90d_cu": _f(addressable_content.get("At Risk", 0), 0),
+            "slipping_addressable_90d_cu": _f(addressable.get("Slipping Regulars", 0), 0),
+            "churn_signal_addressable_90d_cu": _f(addressable.get("At Risk", 0) + addressable.get("Slipping Regulars", 0), 0),
             "slipping_customers": segs["Slipping Regulars"]["customers"],
             "slipping_gap_90d_cu": segs["Slipping Regulars"]["gap_90d_cu_base"],
             "slipping_pct_revenue_12m": segs["Slipping Regulars"]["pct_revenue_12m"],
@@ -619,7 +666,8 @@ def run_all(log: Callable[[str], None] = print, timings: dict | None = None) -> 
     _save(inputs, "campaign_inputs.parquet")
     plan = campaign.plan_frame()
     econ = timed("campaign_economics", campaign.economics, plan, inputs, campaign.default_assumptions())
-    econ["category_focus"] = econ["segment"].map(campaign.category_focus())
+    _save(timed("audience_mix", audience_mix), "audience_mix.parquet")
+    econ["category_focus"] = econ["audience"].map(campaign.audience_category_focus())
     _save(econ, "campaign_economics.parquet")
     scen = timed("campaign_scenarios", campaign.scenario_table, inputs, plan)
     _save(scen, "campaign_scenarios.parquet")

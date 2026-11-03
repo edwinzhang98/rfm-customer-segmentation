@@ -24,7 +24,7 @@ st.markdown(
     "axis but does not pick the cut-offs. The cut-offs are chosen as round numbers close to the quintiles (section 2) that match how the "
     "CRM team works: **30 / 60 days** (a normal purchase cycle for good customers), **120 days** (a season missed), **180 days** "
     "(two seasons) and **365 days** (a full year without buying = Lost, the standard 12-month-active definition). At 120 days, "
-    "repeat buyers still come back at about 44%, which is why the 61-120-day groups get a cheap nudge, not a win-back offer."
+    "repeat buyers still come back at about 43%, which is why the 61-120-day groups get a cheap nudge, not a win-back offer."
 )
 
 st.subheader("2. Fixed business thresholds vs quintiles")
@@ -38,8 +38,10 @@ else:
     q = quantile_scores(active).rename(columns={"r_q": "r", "f_q": "f", "m_q": "m"})
     chart(C.score_distribution(q, "quintiles"), key="dist_q")
     n_f = q["f"].nunique()
-    st.warning(f"With quintiles the frequency score only takes **{n_f} distinct values**: {pct((active.frequency_12m == 1).mean(), 0)} of "
-               "active customers have exactly one order, so several quintile edges fall on the same value and the bands collapse.")
+    st.warning(f"With quintiles the frequency score only takes **{n_f} distinct values** and the lowest band holds "
+               f"{pct((q['f'] == q['f'].min()).mean(), 0)} of active customers: {pct((active.frequency_12m == 1).mean(), 0)} have exactly one order, "
+               "so several quintile edges fall on the same value and the bands merge. Forcing five equal bands instead would split "
+               "identical customers at random.")
 edges = quantile_edges(active)
 business = {"recency_days": "30 / 60 / 120 / 180 (365+ = Lost)", "frequency_12m": "1 / 2 / 3-4 / 5-9 / 10+",
             "monetary_12m_cu": "50 / 100 / 200 / 400"}
@@ -49,7 +51,7 @@ st.markdown(
     f"(R {' / '.join(f'{v:.0f}' for v in edges['recency_days'])} days -> 30 / 60 / 120 / 180; "
     f"M {' / '.join(f'{v:.0f}' for v in edges['monetary_12m_cu'])} CU -> 50 / 100 / 200 / 400). Frequency is set by hand, because "
     f"{pct((active.frequency_12m == 1).mean(), 0)} of active customers have exactly one order and {pct((active.frequency_12m == 2).mean(), 0)} two, "
-    "so quintile edges tie and would split identical customers at random. Once chosen, the numbers stay fixed: quintile edges move every month "
+    "so quintile edges tie: the bands either merge or split identical customers arbitrarily. Once chosen, the numbers stay fixed: quintile edges move every month "
     "with the customer base, and an audience called 'R5' must mean the same thing in October as in September."
 )
 sens = mart("threshold_sensitivity")
@@ -139,8 +141,8 @@ The blue line (customers with 2+ orders) falls from about 78% to about 12% over 
 are chosen to match how the CRM team works (monthly cycle, one season, two seasons, one year).
 
 **Section 2 - two ways to give scores.** The textbook way is quintiles: sort customers and give the top 20% a 5, the next 20% a 4 and so on.
-It breaks here because a third of active customers bought exactly once, so you cannot split them into different 20% groups without
-cutting identical customers apart. Fixed thresholds also keep the meaning of "R5" the same every month.
+It breaks here because a third of active customers bought exactly once: either the bands merge (frequency ends up with only four
+scores) or identical customers get cut apart. Fixed thresholds also keep the meaning of "R5" the same every month.
 
 **Section 3 - sliders.** This is a live re-segmentation. Grey bars = segment sizes with our rules, blue bars = with your thresholds;
 the numbers above the blue bars show how many customers moved. It is a good way to show that the segments are not arbitrary:

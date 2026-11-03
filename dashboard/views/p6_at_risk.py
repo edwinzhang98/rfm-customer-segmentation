@@ -30,7 +30,8 @@ callout(
     f"<b>How to say it to the CRM Manager.</b> Left alone, At Risk customers will spend about {fmt_cu(ar['expected_90d_cu_base'])} in the next 90 days, "
     f"{pct(ar['gap_90d_cu_base'] / ar['run_rate_90d_cu'], 0)} below the {fmt_cu(ar['run_rate_90d_cu'])} they spent per quarter over the last year, and "
     f"{fmt_n(ar['expected_non_buyers_base'])} of them will not buy at all. The early-warning group, Slipping Regulars, shows a further gap of "
-    f"{fmt_cu(sl['gap_90d_cu_base'])}. <b>The autumn plan expects to win back about {fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk</b>: most of the gap "
+    f"{fmt_cu(sl['gap_90d_cu_base'])}. <b>The autumn plan expects to win back about {fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk</b> "
+    f"({fmt_cu(h['at_risk_addressable_content_90d_cu'])} from content emails, the rest from the 10% offer test cell): most of the gap "
     "is the normal slowdown of customers who are past their peak, not money a campaign can recover. That is why the plan is cheap and measured, "
     "and why the number we promise is the measured lift, not the gap."
 )

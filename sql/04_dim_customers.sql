@@ -8,7 +8,9 @@
    Columns : attributes (age band, club status, newsletter subscription),
              two-year order history (first / last order, orders, revenue, channel use),
              channel_profile  = Online only / Store only / Omnichannel over the full window,
-             is_excluded      = suspected staff / reseller account (not a normal consumer):
+             is_excluded      = Review List flag: bulk or near-daily buying pattern (reviewed by
+                                CRM / retail ops before any offer; could be staff, resellers or
+                                business accounts, the data cannot tell):
                                 >= 20 units of one article in one order, OR
                                 >= 100 units in one order, OR
                                 purchases on >= 150 different days in two years.

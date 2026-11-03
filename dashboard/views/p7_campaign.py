@@ -16,12 +16,12 @@ m = metrics()
 camp = m["campaign"]
 inputs = mart("campaign_inputs")
 plan = CP.plan_frame()
-focus = CP.category_focus()
+focus = CP.audience_category_focus()
 aud = CP.audience_frame().set_index("key")
 
 # ----------------------------------------------------------------------------- 1. plan
 st.subheader("1. The plan: one row per audience and arm")
-tbl = plan.assign(rule=plan.audience.map(aud["rule"]), category_focus=plan.segment.map(focus),
+tbl = plan.assign(rule=plan.audience.map(aud["rule"]), category_focus=plan.audience.map(focus),
                   discount=plan.discount_rate.map(lambda v: "none" if v == 0 else f"{100 * v:.0f}% off one order"),
                   assumed_lift=plan.uplift_pp.map(lambda v: f"+{v:.1f} pp"),
                   split=[("-" if r.role == "Not run" else f"{100 * r.audience_share:.0f}% / holdout {100 * r.holdout_share:.0f}%")

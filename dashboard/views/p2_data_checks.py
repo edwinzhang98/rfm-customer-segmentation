@@ -31,7 +31,7 @@ def _status_style(v: str) -> str:
 view = dq[["check_id", "area", "check_name", "status", "observed", "expectation", "handling"]].rename(
     columns={"check_id": "#", "check_name": "check"})
 table(view.style.map(_status_style, subset=["status"]), hide_index=True, width="stretch", height=420)
-note("Known row counts come from the Kaggle competition's data page. SQL: sql/01_data_quality_checks.sql")
+note("Known row counts are the published file sizes of the dataset. SQL: sql/01_data_quality_checks.sql")
 
 st.subheader("2. Two fields that needed detective work")
 chart(C.weekly_channel(mart("weekly_channel_trend")), key="weekly")
@@ -44,7 +44,7 @@ st.markdown(
     """
 | Issue | What we found | What we did | Why |
 |---|---|---|---|
-| **Identical repeated rows** | 2.97M rows (9.4%) repeat another row exactly (same customer, day, item, price, channel) | Kept, collapsed into a `units` column | There is no quantity column: two identical rows = two units bought. Deleting them would remove 9.4% of revenue |
+| **Identical repeated rows** | 2.97M rows (9.4%) repeat another row exactly (same customer, day, item, price, channel) | Kept, collapsed into a `units` column | There is no quantity column: two identical rows = two units bought. Deleting them would remove 9.4% of units and 9.7% of revenue |
 | **Price outliers** | No zero or negative prices; 4,682 rows below 0.50 CU; ~0.1% of revenue far from the item's usual price | Kept and flagged | They are real paid amounts (markdowns). Scores use thresholds, so a few cents cannot move a customer's segment |
 | **Extreme buyers** | Up to 569 identical units in one day; one account bought on 427 of 734 days | 864 accounts put on a **Review List**: kept in every total, no offers or paid media until CRM / retail ops have reviewed them | Bulk or near-daily buying looks like staff, resellers or business accounts, but the data cannot prove it; the rule moves 0.5% of revenue, so no segment result depends on it |
 | **Recency base date** | Data ends 2020-09-22 | Snapshot = 2020-09-22 (recency 0 = bought that day) | Required by the brief; the campaign brief is written in the week after |

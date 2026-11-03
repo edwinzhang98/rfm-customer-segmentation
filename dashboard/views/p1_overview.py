@@ -21,7 +21,7 @@ c1.metric("Customers", fmt_n(d["customers_with_orders"], 2),
           help="Distinct customers with at least one order between 2018-09-20 and 2020-09-22")
 c2.metric("Active (12 months)", fmt_n(d["active_12m_customers"]), f"{pct(d['pct_active_12m'])} of customers",
           delta_color="off", delta_arrow="off")
-c3.metric("Revenue (12 months)", fmt_cu(d["revenue_12m_cu"]), "2019-09-23 to 2020-09-22", delta_color="off", delta_arrow="off",
+c3.metric("Revenue (12 months)", fmt_cu(d["revenue_12m_cu"]), "2019-09-24 to 2020-09-22", delta_color="off", delta_arrow="off",
           help="CU = price x 590 (scaled retail price; currency undisclosed). Gross demand: the data has no returns.")
 c4.metric("At Risk, next 90 days", fmt_cu(h["at_risk_expected_90d_cu"]),
           f"{fmt_cu(h['at_risk_gap_90d_cu'])} below their usual pace", delta_color="off", delta_arrow="off",
@@ -39,7 +39,7 @@ st.markdown(
    next 90 days instead of {fmt_cu(h['at_risk_run_rate_90d_cu'])} at their usual pace, and {fmt_n(h['at_risk_non_buyers_90d'])} of them will not buy
    at all. Slipping Regulars are frequent buyers already 61-120 days quiet ({pct(h['slipping_pct_revenue_12m'], 0)} of revenue, gap about
    {fmt_cu(h['slipping_gap_90d_cu'])}). Much of this gap is natural slowdown that no email reverses: the plan expects to win back about
-   {fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk, and measures it.
+   {fmt_cu(h['at_risk_addressable_90d_cu'])} from At Risk ({fmt_cu(h['at_risk_addressable_content_90d_cu'])} of it from content emails), and measures it.
 3. **Online-only shoppers are not a problem to fix.** {fmt_n(h['online_only_active_customers'])} active customers ({pct(h['pct_online_only_active'], 0)})
    had no identified store purchase in the last 12 months. Online baskets are about twice the size of store baskets
    ({h['aov_online_order_omni']:.0f} vs {h['aov_store_order_omni']:.0f} CU for the same omnichannel customers), but online-only customers come back

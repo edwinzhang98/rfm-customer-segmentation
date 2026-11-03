@@ -7,7 +7,7 @@
    Logic   : 1. The source has no quantity column: identical rows are extra units of
                 the same item (e.g. two identical T-shirts), so they are collapsed into
                 `units` instead of being deleted. Deleting them would drop 9.4% of
-                units and revenue.
+                units and 9.7% of revenue.
              2. Money: price x 590 lands exactly on retail price points (9.99, 19.99,
                 ...), so every price is stored as integer cents of CU (currency units).
                 Integer cents keep every total exact and every rerun identical.

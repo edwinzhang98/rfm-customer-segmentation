@@ -18,7 +18,7 @@
        order before joining).
      * The 2018-09 cohort (11 days) and the incomplete month 2020-09 (22 days) are
        dropped; activity is counted up to 2020-08.
-     * Suspected staff / reseller accounts are excluded.
+     * Review List accounts (bulk or near-daily buying) are left out.
    Run     : python scripts/run_sql.py sql/11_cohort_retention.sql
    ============================================================================= */
 

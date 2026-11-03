@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
-import html
 from typing import Callable
 
 import pandas as pd
@@ -21,7 +20,7 @@ from plotly.offline import get_plotlyjs
 from . import campaign as CP
 from . import charts as C
 from . import data as D
-from .config import get_paths, load_config
+from .config import get_paths
 from .segments import SEGMENT_INFO, SEGMENT_ORDER
 
 fmt_cu, fmt_n, pct = D.fmt_cu, D.fmt_n, D.pct
@@ -96,7 +95,7 @@ ACTION = Template("""<!doctype html>
 
 
 # ----------------------------------------------------------------------------- helpers
-def _fig(fig, first: list[bool]) -> str:
+def _fig(fig) -> str:
     """Plotly div; plotly.js is embedded once in <head>, so every figure uses include_plotlyjs=False."""
     return '<div class="fig">' + pio.to_html(fig, include_plotlyjs=False, full_html=False,
                                               config={"displaylogo": False, "responsive": True}) + "</div>"
@@ -122,8 +121,24 @@ def _ul(items: list[str]) -> str:
     return "<ul>" + "".join(f"<li>{i}</li>" for i in items) + "</ul>"
 
 
+def _fmt_col(s: pd.Series) -> pd.Series:
+    """Readable numbers: thousands separators, no spurious decimals, yes/no for flags."""
+    if pd.api.types.is_bool_dtype(s):
+        return s.map({True: "yes", False: "no"})
+    if not pd.api.types.is_numeric_dtype(s):
+        return s
+    vals = s.dropna()
+    whole = len(vals) > 0 and (vals.round(0) == vals).all()
+    big = len(vals) > 0 and vals.abs().median() >= 100
+    fmt = "{:,.0f}" if (whole or big) else "{:,.2f}"
+    return s.map(lambda v: "-" if pd.isna(v) else fmt.format(v))
+
+
 def _table(df: pd.DataFrame) -> str:
-    return '<div class="tablewrap">' + df.to_html(index=False, classes="t", border=0, escape=True, na_rep="-") + "</div>"
+    out = df.copy()
+    for c in out.columns:
+        out[c] = _fmt_col(out[c])
+    return '<div class="tablewrap">' + out.to_html(index=False, classes="t", border=0, escape=True, na_rep="-") + "</div>"
 
 
 # ----------------------------------------------------------------------------- report
@@ -132,8 +147,7 @@ def build_report() -> str:
     d, h, camp, km = m["data"], m["headline"], m["campaign"], m["kmeans"]
     seg = m["segments"]
     sc = camp["scenarios"]
-    first = [True]
-    F = lambda fig: _fig(fig, first)  # noqa: E731
+    F = _fig
 
     prof = D.mart("segment_profile")
     so = D.mart("segment_outcomes_90d")
@@ -199,8 +213,6 @@ def build_report() -> str:
         _table(dq[["check_id", "area", "check_name", "status", "observed"]].rename(columns={"check_id": "#", "check_name": "check"})),
     ]})
     # 3 method ----------------------------------------------------------------
-    edges = m.get("edges")
-    th = load_config()["rfm_thresholds"]
     rules = pd.DataFrame([{"Segment": s, "Rule": SEGMENT_INFO[s]["rule"], "In plain words": SEGMENT_INFO[s]["plain"]} for s in SEGMENT_ORDER])
     sections.append({"id": "method", "title": "Method: RFM scores and segment rules", "blocks": [
         _p("Snapshot 2020-09-22 (the last day in the data). <b>Recency</b> = days since the last order; <b>Frequency</b> = orders in the 365 days up to the "
@@ -210,8 +222,9 @@ def build_report() -> str:
         _take("The chance of buying again falls smoothly with time since the last order: recency is the right main axis, and the cut-offs are a "
               "business choice placed on a smooth curve (30 / 60 days = a purchase cycle, 120 = a season, 180 = two seasons, 365 = a year)."),
         _p("Why fixed thresholds rather than quintiles: the R and M cut-offs are the active-customer quintiles rounded to numbers people can say out "
-           "loud; Frequency is set by hand because 34% of active customers have exactly one order, so quintile edges tie and would split identical "
-           "customers at random; fixed numbers keep an audience's meaning stable month to month. Segments are assigned in order, first match wins:"),
+           "loud; Frequency is set by hand because 34% of active customers have exactly one order, so quintile edges tie (the bands either merge or "
+           "split identical customers arbitrarily); fixed numbers keep an audience's meaning stable month to month. Segments are assigned in order, "
+           "first match wins:"),
         _table(rules),
         F(C.kmeans_crosstab(D.mart("kmeans_crosstab"), D.mart("kmeans_profile"))),
         _take(f"A K-Means check on the same three measures finds no natural clusters (separation is best at k = 2 and falls with k), recovers the Champions "
@@ -238,8 +251,11 @@ def build_report() -> str:
     # 5 drill-down ----------------------------------------------------------------
     sections.append({"id": "drilldown", "title": "What segments buy, and the online-only question", "blocks": [
         F(C.category_affinity(mix, "At Risk")),
-        _take("At Risk customers last bought in autumn/winter and over-index on knitwear and outerwear: the autumn win-back leads with those. "
-              "Affinity reflects when a segment last bought as much as what it likes."),
+        _take("At Risk as a whole over-indexes on knitwear and outerwear, but the skew belongs to the customers quiet for 181-364 days, who last "
+              "bought in autumn / winter 2019-20 (outdoor 165, knitwear 155 for those spending 200+ CU); the 121-180-day group last bought during "
+              "the spring 2020 closure and under-indexes on both. The autumn win-back therefore leads with knitwear and outerwear only for the "
+              "long-lapsed group and with each customer's own top categories for the rest. Affinity reflects when a group last bought as much as "
+              "what it likes."),
         F(C.channel_mix(mix)),
         F(C.channel_value(D.mart("channel_value"))),
         F(C.channel_forward(D.mart("channel_forward"))),
@@ -264,8 +280,9 @@ def build_report() -> str:
         _table(rr),
         _call(f"The gap vs usual pace is not money a campaign can recover: groups chosen for a strong year fall back (Champions spending 400+ CU realised "
               f"{pct(h['champions_realisation_m5'], 0)} of their pace, those at 200-399 CU {pct(h['champions_realisation_m4'], 0)}), and groups chosen for "
-              f"going quiet keep slowing. The plan expects about {fmt_cu(h['at_risk_addressable_90d_cu'])} of incremental revenue from At Risk, a few percent of "
-              "its gap; that measured lift, not the gap, is what we report."),
+              f"going quiet keep slowing. The plan expects about {fmt_cu(h['at_risk_addressable_90d_cu'])} of incremental revenue from At Risk "
+              f"({fmt_cu(h['at_risk_addressable_content_90d_cu'])} from the content emails, the rest from the 10% offer test cell), a few percent "
+              "of its gap; that measured lift, not the gap, is what we report."),
     ]})
     # 7 campaign ----------------------------------------------------------------
     plan_tbl = econ[["audience_label", "arm", "role", "action", "timing", "discount_rate", "uplift_pp", "breakeven_uplift_pp", "net_profit_cu"]].copy()
@@ -282,7 +299,7 @@ def build_report() -> str:
               "about one order. Where a quarter or more of an audience buys anyway, a coupon needs a lift of 5+ points to break even. Content costs "
               "almost nothing, so small lifts pay. The two discount cells measure this instead of assuming it."),
         F(C.scenario_bars(D.mart("campaign_scenarios"))),
-        _table(budget.assign(cost_cu=budget.cost_cu.round(0)).rename(columns={"line": "Budget line", "cost_cu": "CU", "note": "How"})),
+        _table(budget.rename(columns={"line": "Budget line", "cost_cu": "CU", "note": "How"})),
     ]})
     # 8 measurement -------------------------------------------------------------
     meas = econ[econ.role != "Not run"][["audience_label", "arm", "role", "experiment_population", "holdout", "contacted", "uplift_pp",
@@ -344,12 +361,12 @@ def build_action_plan() -> str:
     h, camp, seg = m["headline"], m["campaign"], m["segments"]
     sc = camp["scenarios"]
     econ = D.mart("campaign_economics")
-    focus = CP.category_focus()
+    focus = CP.audience_category_focus()
     rows = []
     for r in econ[econ.role != "Not run"].itertuples():
         rows.append({"Audience": r.audience_label, "Action": r.arm + (" (test cell)" if r.role == "Test cell" else ""),
                      "When": r.timing.split(";")[0], "Channel": "Email + paid social" if r.use_paid_social else ("Email only" if "subscribers only" in r.channels.lower() else "Email + member app"),
-                     "Focus": focus.get(r.segment, "-").replace("mirrors the overall mix (no category at index >= 120)", "their own top categories"),
+                     "Focus": focus.get(r.audience, "-").replace(" (no category at index >= 120)", ""),
                      "Discount": "none" if r.discount_rate == 0 else f"{100 * r.discount_rate:.0f}%", "KPI": r.kpi.split("(")[0].strip()})
     for s, why in CP.NO_CAMPAIGN.items():
         rows.append({"Audience": s, "Action": "No autumn spend", "When": "-", "Channel": "-", "Focus": "-", "Discount": "-", "KPI": "-"})
@@ -375,9 +392,8 @@ def build_action_plan() -> str:
     finally:
         C.stop_static_export()
     return ACTION.render(css=CSS, snapshot=m["data"]["snapshot_date"], launch=camp["launch_date"], read=camp["read_date"], answer=answer,
-                         plan_table=pd.DataFrame(rows).to_html(index=False, classes="t", border=0),
-                         budget_table=budget.assign(cost_cu=budget.cost_cu.round(0)).rename(
-                             columns={"line": "Line", "cost_cu": "CU", "note": "How it is calculated"}).to_html(index=False, classes="t", border=0),
+                         plan_table=_table(pd.DataFrame(rows)),
+                         budget_table=_table(budget.rename(columns={"line": "Line", "cost_cu": "CU", "note": "How it is calculated"})),
                          measure=measure, asks=asks, chart_png=base64.b64encode(png).decode())
 
 

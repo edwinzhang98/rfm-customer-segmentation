@@ -8,8 +8,8 @@
              one row per check: check_id, area, check_name, observed, expectation,
              status (PASS / FLAG = known issue, handled / FAIL = blocks the pipeline),
              handling (what we do about it)
-   Notes   : "Known" row counts come from the Kaggle competition data page
-             (H&M Personalized Fashion Recommendations, 2022).
+   Notes   : "Known" row counts are the published file sizes of the public
+             H&M Personalized Fashion Recommendations dataset (2022).
              Pipeline-level reconciliation (rows -> lines -> orders -> customers ->
              segments) is in 13_reconciliation_checks.sql.
    Params  : price_scale (default 590), exclusion thresholds (defaults = config.yaml)
