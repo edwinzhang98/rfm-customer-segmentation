@@ -650,8 +650,10 @@ The dashboard reads these numbers from [`reports/metrics.json`](../reports/metri
 | At Risk gap 2.1M CU (scenarios 2.1M to 2.4M) | 2,105,894; 2,105,894 to 2,408,597 | 4.6 | `headline.at_risk_gap_90d_cu`, `_low`, `_high` |
 | About 59K At Risk customers (65%) are expected not to buy | 58,643 | 4.8 | `headline.at_risk_non_buyers_90d` |
 | The plan expects about 45K CU of incremental revenue from At Risk | 44,510 | 4.6 | `headline.at_risk_addressable_90d_cu` |
+| ... of which about 26K from content emails and 19K from the 10% offer test cell | 25,700; 18,810 | 4.6, 5.7 | `headline.at_risk_addressable_content_90d_cu`; the difference |
 | 61.7K Slipping Regulars, 10.4% of revenue, gap 1.0M CU | 61,655; 10.36%; 965,169 | 3.1, 4.6 | `headline.slipping_customers`, `headline.slipping_pct_revenue_12m`, `headline.slipping_gap_90d_cu` |
 | 11% of customers show a churn signal; gap 3.1M CU | 151,503 (11.13%); 3,071,063 | 3.2, 4.6 | `headline.churn_signal_customers`, `headline.churn_signal_pct_customers`, `headline.churn_signal_gap_90d_cu` |
+| The win-back plan expects about 65K CU of incremental revenue from them (At Risk 45K + Slipping Regulars 20K) | 64,830; 44,510; 20,320 | 4.6 | `headline.churn_signal_addressable_90d_cu`, `headline.at_risk_addressable_90d_cu`, `headline.slipping_addressable_90d_cu` |
 | 60% of At Risk last bought in March–May 2020 | 59.79% | 4.4 | `headline.at_risk_lockdown_share` |
 | Champions at 400+ CU realised 86% of their pace, at 200–399 CU 105% | 86.48%; 105.43% | 4.6 | `headline.champions_realisation_m5`, `headline.champions_realisation_m4` |
 | 483K active customers (49%) are online only | 482,607; 48.61% | 2.10 | `headline.online_only_active_customers`, `headline.pct_online_only_active` |

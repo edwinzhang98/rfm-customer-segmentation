@@ -36,7 +36,7 @@ COPY (
             AVG(recency_days)                                            AS avg_recency_days,
             MEDIAN(recency_days)                                         AS median_recency_days,
             AVG(frequency_12m)                                           AS avg_orders_12m,
-            AVG(monetary_12m_cu)                                         AS avg_revenue_12m_cu,
+            SUM(monetary_12m_cents) / COUNT(*) / 100.0                   AS avg_revenue_12m_cu,
             MEDIAN(avg_days_between_orders_12m)                          AS median_days_between_orders,
             AVG(tenure_days)                                             AS avg_tenure_days,
             AVG((channel_12m = 'Online only')::INT) FILTER (WHERE frequency_12m > 0)  AS pct_online_only_12m,

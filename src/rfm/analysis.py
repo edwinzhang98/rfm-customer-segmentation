@@ -185,10 +185,11 @@ def channel_tables(online_return_rate: float = 0.25, store_return_rate: float = 
     """
     value = query(f"""
         SELECT {_BAND} AS order_band, channel_12m AS channel, COUNT(*) AS customers,
-               AVG(monetary_12m_cu) AS revenue_per_customer_cu,
-               SUM(monetary_12m_cu) / SUM(frequency_12m) AS aov_cu,
-               AVG((online_revenue_12m_cents * {1 - online_return_rate}
-                    + (monetary_12m_cents - online_revenue_12m_cents) * {1 - store_return_rate}) / 100.0) AS revenue_net_of_returns_cu
+               SUM(monetary_12m_cents) / COUNT(*) / 100.0 AS revenue_per_customer_cu,
+               SUM(monetary_12m_cents) / SUM(frequency_12m) / 100.0 AS aov_cu,
+               ({1 - online_return_rate} * SUM(online_revenue_12m_cents)
+                + {1 - store_return_rate} * SUM(monetary_12m_cents - online_revenue_12m_cents)) / COUNT(*) / 100.0
+                   AS revenue_net_of_returns_cu
         FROM 'data/marts/customer_rfm.parquet'
         WHERE snapshot_name = 'current' AND frequency_12m > 0 AND NOT is_excluded
         GROUP BY ALL ORDER BY ALL""")
@@ -218,7 +219,7 @@ def channel_tables(online_return_rate: float = 0.25, store_return_rate: float = 
     audience = query("""
         SELECT segment, channel_12m AS channel, COUNT(*) AS customers,
                SUM(is_newsletter_subscriber::INT) AS newsletter_subscribers,
-               SUM(monetary_12m_cu) AS revenue_12m_cu
+               SUM(monetary_12m_cents) / 100.0 AS revenue_12m_cu
         FROM 'data/marts/customer_rfm.parquet'
         WHERE snapshot_name = 'current'
         GROUP BY ALL ORDER BY ALL""")
@@ -291,7 +292,7 @@ def threshold_sensitivity(step: float = 0.25) -> pd.DataFrame:
 
 def value_grid() -> pd.DataFrame:
     return query("""
-        SELECT segment, value_tier, COUNT(*) AS customers, SUM(monetary_12m_cu) AS revenue_12m_cu
+        SELECT segment, value_tier, COUNT(*) AS customers, SUM(monetary_12m_cents) / 100.0 AS revenue_12m_cu
         FROM 'data/marts/customer_rfm.parquet' WHERE snapshot_name = 'current'
         GROUP BY ALL ORDER BY ALL""")
 
@@ -440,7 +441,7 @@ def price_points_table() -> pd.DataFrame:
 def rf_grid() -> pd.DataFrame:
     """Recency score x Frequency score grid for 12-month-active customers (current snapshot)."""
     return query("""
-        SELECT r_score, f_score, COUNT(*) AS customers, SUM(monetary_12m_cu) AS revenue_12m_cu
+        SELECT r_score, f_score, COUNT(*) AS customers, SUM(monetary_12m_cents) / 100.0 AS revenue_12m_cu
         FROM 'data/marts/customer_rfm.parquet'
         WHERE snapshot_name = 'current' AND frequency_12m > 0 AND NOT is_excluded
         GROUP BY ALL ORDER BY ALL""")
@@ -502,7 +503,7 @@ def build_metrics(km: dict, rar: pd.DataFrame, econ: pd.DataFrame, scen: pd.Data
                           SUM(is_newsletter_subscriber::INT) AS newsletter FROM 'data/marts/dim_customers.parquet'""").iloc[0]
     rows_ = query("SELECT COUNT(*) AS n FROM 'data/staged/stg_transactions.parquet'").iloc[0]["n"]
     orders = query("SELECT COUNT(*) AS orders, SUM(revenue_cents)/100.0 AS revenue_cu FROM 'data/marts/fct_orders.parquet'").iloc[0]
-    active = query("""SELECT COUNT(*) AS active, SUM(monetary_12m_cu) AS rev12, SUM(is_newsletter_subscriber::INT) AS subs
+    active = query("""SELECT COUNT(*) AS active, SUM(monetary_12m_cents) / 100.0 AS rev12, SUM(is_newsletter_subscriber::INT) AS subs
                       FROM 'data/marts/customer_rfm.parquet' WHERE snapshot_name='current' AND frequency_12m > 0""").iloc[0]
     r = rar.set_index("segment")
 

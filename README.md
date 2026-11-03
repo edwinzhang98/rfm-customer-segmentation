@@ -113,7 +113,7 @@ Days between orders: median of each customer's average gap between orders in the
 
 ## How to run
 
-Requirements: Python 3.11+ (tested on 3.12), ~2 GB free disk for the Parquet files, Google Chrome for PNG export and screenshots.
+Requirements: Python 3.11+ (tested on 3.12), 16 GB RAM recommended (the data-quality step peaks at about 14 GB; with less memory, or other heavy jobs running, DuckDB spills to disk and that step can take a few minutes instead of 15 seconds), ~2 GB free disk for the Parquet files, Google Chrome for PNG export and screenshots.
 
 ```bash
 make setup
@@ -137,15 +137,15 @@ Other targets: `make test` (SQL/Python parity, every dashboard page, interactive
 | Step      | What it does                                                         | Seconds   |
 |:----------|:---------------------------------------------------------------------|:----------|
 | link      | point data/raw at the H&M files                                      | 0.0       |
-| stage     | CSV to Parquet with DuckDB (31.8M rows)                              | 2.8       |
-| dq        | 23 data-quality checks                                               | 12.0      |
-| marts     | clean facts, RFM at three dates, backtests, profiles (SQL 02-12, 14) | 12.4      |
-| reconcile | 19 reconciliation checks                                             | 0.5       |
-| analysis  | do-nothing projection, campaign economics, K-Means check, metrics    | 28.6      |
-| figures   | 16 PNG charts                                                        | 2.9       |
-| report    | report.html and action_plan.html                                     | 1.6       |
-| notebooks | execute notebooks 01-04 and export to HTML                           | 22.4      |
-| **Total** | plus under a second to regenerate the doc tables                     | **83.1**  |
+| stage     | CSV to Parquet with DuckDB (31.8M rows)                              | 3.2       |
+| dq        | 23 data-quality checks                                               | 139.5     |
+| marts     | clean facts, RFM at three dates, backtests, profiles (SQL 02-12, 14) | 13.6      |
+| reconcile | 19 reconciliation checks                                             | 0.6       |
+| analysis  | do-nothing projection, campaign economics, K-Means check, metrics    | 30.4      |
+| figures   | 16 PNG charts                                                        | 2.6       |
+| report    | report.html and action_plan.html                                     | 1.5       |
+| notebooks | execute notebooks 01-04 and export to HTML                           | 25.4      |
+| **Total** | plus under a second to regenerate the doc tables                     | **216.8** |
 
 <!-- END:run_timings -->
 

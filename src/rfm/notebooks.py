@@ -28,7 +28,10 @@ def execute_and_export(log: Callable[[str], None] = print, timings: dict | None 
         path = nb_dir / name
         t0 = time.perf_counter()
         nb = nbformat.read(path, as_version=4)
-        ExecutePreprocessor(timeout=timeout, kernel_name="python3").preprocess(nb, {"metadata": {"path": str(nb_dir)}})
+        # no per-cell timestamps and one merged block per printed output, so a rerun only changes a
+        # notebook when its results change
+        ExecutePreprocessor(timeout=timeout, kernel_name="python3", record_timing=False,
+                            coalesce_streams=True).preprocess(nb, {"metadata": {"path": str(nb_dir)}})
         nbformat.write(nb, path)
         body, _ = exporter.from_notebook_node(nb)
         (out_dir / name.replace(".ipynb", ".html")).write_text(body)

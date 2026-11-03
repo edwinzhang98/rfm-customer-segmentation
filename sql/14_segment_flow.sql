@@ -19,14 +19,14 @@ COPY (
         FROM 'data/marts/customer_rfm.parquet' WHERE snapshot_name = 'backtest_recent'
     ),
     cur AS (
-        SELECT customer_id, segment AS to_segment, monetary_12m_cu
+        SELECT customer_id, segment AS to_segment, monetary_12m_cents
         FROM 'data/marts/customer_rfm.parquet' WHERE snapshot_name = 'current'
     ),
     flows AS (
         SELECT COALESCE(p.from_segment, 'Not yet a customer') AS from_segment,
                c.to_segment,
                COUNT(*)                                       AS customers,
-               SUM(c.monetary_12m_cu)                         AS revenue_12m_cu_now
+               SUM(c.monetary_12m_cents) / 100.0              AS revenue_12m_cu_now
         FROM cur c
         LEFT JOIN prev p USING (customer_id)
         GROUP BY ALL
