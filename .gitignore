@@ -17,3 +17,5 @@ __pycache__/
 
 # Streamlit
 .streamlit/secrets.toml
+*.egg-info/
+build/
