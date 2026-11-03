@@ -1,0 +1,19 @@
+# Data: raw data is never committed; all derived Parquet / DuckDB files are rebuilt by `make all`
+data/
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.csv
+!docs/**/*.csv
+
+# Environment
+.venv/
+.env
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml

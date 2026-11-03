@@ -1,0 +1,59 @@
+# Single place for every analysis parameter.
+# The SQL files repeat these values as defaults (so each file can run on its own);
+# `python run.py` passes the values below into every SQL file, and tests/test_config_sync.py
+# fails if a SQL default drifts away from this file.
+
+data:
+  # Folder with transactions_train.csv, customers.csv, articles.csv.
+  # Override without editing this file: set HM_RAW_DIR in .env (see .env.example).
+  raw_dir: ~/projects/data-projects/datasets/p3-comp-hm-2020
+  # Derived Parquet files (staged/ and marts/) are written under this folder (gitignored).
+  work_dir: data
+
+snapshot:
+  current: 2020-09-22            # last transaction date in the data = Recency base date
+  backtest_seasonal: 2019-09-22  # same season one year earlier (base case for "if we do nothing")
+  backtest_recent: 2020-06-24    # most recent full 90 days (alternative case)
+  lookback_days: 365             # Frequency and Monetary window (trailing 12 months incl. snapshot day)
+  outcome_days: 90               # horizon for the counterfactual and campaign KPIs
+
+money:
+  price_scale: 590               # price x 590 = reconstructed retail price in currency units (CU)
+
+rfm_thresholds:                  # business thresholds (fixed), see docs/02_metric_definitions.md
+  r5_max_days: 30                # R5: bought in the last 0-30 days
+  r4_max_days: 60                # R4: 31-60
+  r3_max_days: 120               # R3: 61-120
+  r2_max_days: 180               # R2: 121-180, R1: 181-364, >= 365 days = Lost (not scored)
+  f5_min_orders: 10              # F5: 10+ orders in 12 months
+  f4_min_orders: 5               # F4: 5-9
+  f3_min_orders: 3               # F3: 3-4
+  f2_min_orders: 2               # F2: 2, F1: 1
+  m5_min_cu: 400                 # M5: 400+ CU in 12 months
+  m4_min_cu: 200                 # M4: 200-399
+  m3_min_cu: 100                 # M3: 100-199
+  m2_min_cu: 50                  # M2: 50-99, M1: < 50
+  new_customer_days: 90          # first purchase within the last 90 days = New Customers
+
+exclusion:                       # suspected staff / reseller accounts (kept in totals, not targeted)
+  units_same_article_per_order: 20
+  units_per_order: 100
+  purchase_days_2y: 150
+
+kmeans:
+  k_range: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+  k_final: 5
+  silhouette_sample: 20000
+  stability_seeds: [1, 2, 3, 4, 5]
+
+economics:                       # planning assumptions for the campaign model (all adjustable in the dashboard)
+  gross_margin: 0.50             # H&M group gross margin FY2020 50.0%, FY2019 52.6% (full-year reports)
+  baseline_redemption_share: 0.50  # share of customers who would buy anyway that also use a coupon if they get one
+  contact_cost_cu:
+    email: 0.01
+    paid_social: 0.30
+  holdout_share: 0.10
+  alpha: 0.05
+  power: 0.80
+
+random_seed: 42
