@@ -188,15 +188,15 @@ The segmentation is re-run monthly with the same SQL, and the checks run with it
 | Step      | What it does                                                         | Seconds   |
 |:----------|:---------------------------------------------------------------------|:----------|
 | link      | point data/raw at the H&M files                                      | 0.0       |
-| stage     | CSV to Parquet with DuckDB (31.8M rows)                              | 3.2       |
-| dq        | 23 data-quality checks                                               | 139.5     |
-| marts     | clean facts, RFM at three dates, backtests, profiles (SQL 02-12, 14) | 13.6      |
-| reconcile | 19 reconciliation checks                                             | 0.6       |
-| analysis  | do-nothing projection, campaign economics, K-Means check, metrics    | 30.4      |
-| figures   | 16 PNG charts                                                        | 2.6       |
-| report    | report.html and action_plan.html                                     | 1.5       |
-| notebooks | execute notebooks 01-04 and export to HTML                           | 25.4      |
-| **Total** | plus under a second to regenerate the doc tables                     | **216.8** |
+| stage     | CSV to Parquet with DuckDB (31.8M rows)                              | 4.7       |
+| dq        | 23 data-quality checks                                               | 25.4      |
+| marts     | clean facts, RFM at three dates, backtests, profiles (SQL 02-12, 14) | 17.8      |
+| reconcile | 19 reconciliation checks                                             | 0.7       |
+| analysis  | do-nothing projection, campaign economics, K-Means check, metrics    | 60.2      |
+| figures   | 16 PNG charts                                                        | 4.3       |
+| report    | report.html and action_plan.html                                     | 1.9       |
+| notebooks | execute notebooks 01-04 and export to HTML                           | 36.3      |
+| **Total** | plus under a second to regenerate the doc tables                     | **151.2** |
 
 <!-- END:run_timings -->
 
