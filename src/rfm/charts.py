@@ -561,3 +561,28 @@ def scenario_bars(scen: pd.DataFrame) -> go.Figure:
     r = scen[scen.role == "Rollout"].set_index("scenario")["net_profit_cu"]
     return _finish(fig, f"The content-led rollout stays at or above break-even in all three scenarios ({r['Pessimistic'] / 1e3:+.0f}K to {r['Optimistic'] / 1e3:+.0f}K CU)",
                    "Pessimistic: half the assumed lifts, 30% margin, paid social 0.60 CU; Optimistic: 1.5x lifts, 50% margin, average-buyer value", 400)
+
+
+# ============================================================================= static export
+_SERVER_STARTED = False
+
+
+def start_static_export() -> None:
+    """Start one persistent headless browser for PNG export (much faster and more stable than one per figure)."""
+    global _SERVER_STARTED
+    if not _SERVER_STARTED:
+        import kaleido
+
+        kaleido.start_sync_server(silence_warnings=True)
+        _SERVER_STARTED = True
+
+
+def stop_static_export() -> None:
+    global _SERVER_STARTED
+    if _SERVER_STARTED:
+        import kaleido
+
+        try:
+            kaleido.stop_sync_server(silence_warnings=True)
+        finally:
+            _SERVER_STARTED = False

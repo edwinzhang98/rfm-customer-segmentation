@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from common import callout, chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct
+from common import callout, chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct, table
 from rfm import campaign as CP
 from rfm import charts as C
 from rfm import power as PW
@@ -31,7 +31,7 @@ tbl = tbl[["audience_label", "rule", "arm", "role", "objective", "action", "timi
 tbl.columns = ["Audience", "Audience rule", "Arm", "Role", "Goal", "Action", "Timing", "Channel", "Category focus (index)", "Discount",
                "Assumed lift (ITT)", "Primary KPI", "Decision rule", "Risk", "Share of reachable audience"]
 no_camp = pd.DataFrame([{"Audience": k, "Arm": "No autumn campaign", "Role": "-", "Goal": v} for k, v in CP.NO_CAMPAIGN.items()])
-st.dataframe(pd.concat([tbl, no_camp], ignore_index=True).fillna(""), hide_index=True, width="stretch", height=470,
+table(pd.concat([tbl, no_camp], ignore_index=True).fillna(""), hide_index=True, width="stretch", height=470,
              column_config={c: st.column_config.TextColumn(width="large") for c in ["Goal", "Action", "Risk", "Decision rule", "Timing", "Channel"]})
 note(f"Launch week of {CP.LAUNCH_DATE}; final read {CP.READ_DATE} (day 90). 'Not run' rows were considered and rejected; they stay in the table "
      "so the reasoning is visible.")
@@ -73,6 +73,8 @@ edited = st.data_editor(
     editable, hide_index=True, width="stretch", key="arm_editor", disabled=["audience_label", "arm", "role"],
     column_config={
         "audience_label": st.column_config.TextColumn("Audience"),
+        "arm": st.column_config.TextColumn("Arm"),
+        "role": st.column_config.TextColumn("Role"),
         "uplift_pp": st.column_config.NumberColumn("Assumed lift (pp)", min_value=0.0, max_value=20.0, step=0.1, format="%.1f"),
         "discount_rate": st.column_config.NumberColumn("Discount (share of order)", min_value=0.0, max_value=0.5, step=0.05, format="%.2f"),
         "audience_share": st.column_config.NumberColumn("Share of reachable audience", min_value=0.0, max_value=0.9, step=0.05, format="%.2f"),
@@ -86,14 +88,11 @@ live = econ[econ.role != "Not run"]
 roll, test = live[live.role == "Rollout"], live[live.role == "Test cell"]
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Customers contacted (rollout)", fmt_n(roll.contacted.sum()))
-k2.metric("Rollout cost", fmt_cu(roll.total_cost_cu.sum()), f"incremental revenue {fmt_cu(roll.incremental_revenue_cu.sum())}", delta_color="off")
+k2.metric("Rollout cost", fmt_cu(roll.total_cost_cu.sum()), f"incremental revenue {fmt_cu(roll.incremental_revenue_cu.sum())}", delta_color="off", delta_arrow="off")
 k3.metric("Expected net profit (rollout)", fmt_cu(roll.net_profit_cu.sum()))
-k4.metric("Test cells: expected net", fmt_cu(test.net_profit_cu.sum()), f"cost {fmt_cu(test.total_cost_cu.sum())}", delta_color="off")
-c1, c2 = st.columns(2)
-with c1:
-    chart(C.net_profit_by_arm(econ), key="np")
-with c2:
-    chart(C.breakeven_vs_assumed(econ), key="be")
+k4.metric("Test cells: expected net", fmt_cu(test.net_profit_cu.sum()), f"cost {fmt_cu(test.total_cost_cu.sum())}", delta_color="off", delta_arrow="off")
+chart(C.net_profit_by_arm(econ), key="np")
+chart(C.breakeven_vs_assumed(econ), key="be")
 show = econ[["audience_label", "arm", "role", "contacted", "baseline_rate", "uplift_pp", "breakeven_uplift_pp", "incremental_buyers",
              "incremental_revenue_cu", "discount_cost_cu", "contact_cost_cu", "net_profit_cu"]].copy()
 show["baseline_rate"] = (100 * show["baseline_rate"]).round(1)
@@ -101,7 +100,7 @@ show = show.round({"contacted": 0, "breakeven_uplift_pp": 2, "incremental_buyers
                    "contact_cost_cu": 0, "net_profit_cu": 0})
 show.columns = ["Audience", "Arm", "Role", "Contacted", "Buys anyway (%)", "Assumed lift (pp)", "Break-even lift (pp)", "Incremental buyers",
                 "Incremental revenue (CU)", "Discount cost (CU)", "Contact cost (CU)", "Net profit (CU)"]
-st.dataframe(show, hide_index=True, width="stretch")
+table(show, hide_index=True, width="stretch")
 callout("<b>The pattern behind the numbers:</b> a discount is paid on every redeemed order, including orders from customers who would have "
         "bought anyway, and an incremental buyer is worth about one order. Where a quarter or more of the audience buys anyway, a coupon needs "
         "a lift of 5+ points to break even, more than win-back campaigns usually deliver. Content and early access cost almost nothing, so even a "
@@ -114,7 +113,7 @@ st.subheader("3. The budget ask, and where the next CU goes")
 c1, c2 = st.columns([3, 2])
 with c1:
     bl = mart("campaign_budget")
-    st.dataframe(bl.assign(cost_cu=bl.cost_cu.round(0)).rename(columns={"line": "Line", "cost_cu": "CU", "note": "How it is calculated"}),
+    table(bl.assign(cost_cu=bl.cost_cu.round(0)).rename(columns={"line": "Line", "cost_cu": "CU", "note": "How it is calculated"}),
                  hide_index=True, width="stretch")
 with c2:
     st.markdown(
@@ -132,10 +131,10 @@ max_budget = float(max(pos.total_cost_cu.sum(), 1.0))
 budget = st.slider("Budget for the rollout arms (CU)", 0.0, round(max_budget * 1.2, -2), round(max_budget * 0.5, -2), 100.0, key="budget")
 alloc = CP.allocate_budget(econ, budget)
 k1, k2, k3 = st.columns(3)
-k1.metric("Budget used", fmt_cu(alloc.funded_cost_cu.sum()), f"of {fmt_cu(budget)}", delta_color="off")
+k1.metric("Budget used", fmt_cu(alloc.funded_cost_cu.sum()), f"of {fmt_cu(budget)}", delta_color="off", delta_arrow="off")
 k2.metric("Expected incremental revenue", fmt_cu(alloc.funded_incremental_revenue_cu.sum()))
 k3.metric("Expected net profit", fmt_cu(alloc.funded_net_profit_cu.sum()))
-st.dataframe(alloc[["audience_label", "arm", "profit_per_cu", "total_cost_cu", "funded_share", "funded_cost_cu", "funded_net_profit_cu"]]
+table(alloc[["audience_label", "arm", "profit_per_cu", "total_cost_cu", "funded_share", "funded_cost_cu", "funded_net_profit_cu"]]
              .assign(funded_share=lambda x: (100 * x.funded_share).round(0).astype(int).astype(str) + "%")
              .round({"profit_per_cu": 2, "total_cost_cu": 0, "funded_cost_cu": 0, "funded_net_profit_cu": 0})
              .rename(columns={"audience_label": "Audience", "arm": "Arm", "profit_per_cu": "Net profit per CU spent", "total_cost_cu": "Full cost (CU)",
@@ -172,24 +171,25 @@ The day-30 read covers delivery and guardrails only (unsubscribes, complaints): 
 At Risk are Holm-adjusted.
 """
 )
-c1, c2 = st.columns([1, 2])
-with c1:
-    labels = inputs.set_index("audience")["audience_label"]
-    key = st.selectbox("Audience", list(labels.index), index=list(labels.index).index("at_risk_181_364_high"),
-                       format_func=lambda k: labels[k], key="mde_aud")
-    share = st.slider("Holdout share", 0.05, 0.30, 0.10, 0.01, key="mde_share")
-    row = inputs.set_index("audience").loc[key]
-    paid = bool(plan[(plan.audience == key) & (plan.role != "Not run")].use_paid_social.any())
-    pop = row.customers * (1.0 if paid else row.newsletter_share)
-    mde_r = 100 * PW.mde_rate(row.baseline_rate, pop * (1 - share), pop * share)
-    mde_v = PW.mde_mean(row.sd_revenue, pop * (1 - share), pop * share)
-    assumed = float(plan[(plan.audience == key) & (plan.role == "Rollout")].uplift_pp.iloc[0])
-    st.metric("Reachable population", f"{round(pop):,}", "email + paid social" if paid else "newsletter subscribers only", delta_color="off")
-    st.metric("Holdout customers", f"{round(pop * share):,}")
-    st.metric("Detectable lift, repurchase rate", f"{mde_r:.2f} pp", f"assumed +{assumed:.1f} pp", delta_color="off")
-    st.metric("Detectable lift, revenue per customer", f"{mde_v:.1f} CU", f"baseline {row.revenue_per_customer:.1f} CU", delta_color="off")
-with c2:
-    chart(C.mde_by_holdout(mart("holdout_power"), key, assumed, share), key="mde")
+labels = inputs.set_index("audience")["audience_label"]
+c1, c2 = st.columns(2)
+key = c1.selectbox("Audience", list(labels.index), index=list(labels.index).index("at_risk_181_364_high"),
+                   format_func=lambda k: labels[k], key="mde_aud")
+share = c2.slider("Holdout share", 0.05, 0.30, 0.10, 0.01, key="mde_share")
+row = inputs.set_index("audience").loc[key]
+paid = bool(plan[(plan.audience == key) & (plan.role != "Not run")].use_paid_social.any())
+pop = row.customers * (1.0 if paid else row.newsletter_share)
+mde_r = 100 * PW.mde_rate(row.baseline_rate, pop * (1 - share), pop * share)
+mde_v = PW.mde_mean(row.sd_revenue, pop * (1 - share), pop * share)
+assumed = float(plan[(plan.audience == key) & (plan.role == "Rollout")].uplift_pp.iloc[0])
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Reachable population", f"{round(pop):,}", "email + paid social" if paid else "newsletter subscribers only",
+          delta_color="off", delta_arrow="off")
+k2.metric("Holdout customers", f"{round(pop * share):,}")
+k3.metric("Detectable lift, repurchase rate", f"{mde_r:.2f} pp", f"assumed +{assumed:.1f} pp", delta_color="off", delta_arrow="off")
+k4.metric("Detectable lift, revenue per customer", f"{mde_v:.1f} CU", f"baseline {row.revenue_per_customer:.1f} CU",
+          delta_color="off", delta_arrow="off")
+chart(C.mde_by_holdout(mart("holdout_power"), key, assumed, share), key="mde")
 arm_tbl = econ[econ.role != "Not run"][["audience_label", "arm", "role", "experiment_population", "holdout", "contacted", "uplift_pp",
                                         "breakeven_uplift_pp", "mde_rate_pp", "mde_revenue_cu", "readable_alone", "powered_for_decision"]].copy()
 arm_tbl = arm_tbl.round({"experiment_population": 0, "holdout": 0, "contacted": 0, "breakeven_uplift_pp": 2, "mde_rate_pp": 2, "mde_revenue_cu": 1})
@@ -197,11 +197,11 @@ arm_tbl["readable_alone"] = arm_tbl["readable_alone"].map({True: "yes", False: "
 arm_tbl["powered_for_decision"] = np.where(arm_tbl.role == "Test cell", arm_tbl["powered_for_decision"].map({True: "yes", False: "no"}), "-")
 arm_tbl.columns = ["Audience", "Arm", "Role", "Reachable population", "Holdout", "Arm size", "Assumed lift (pp)", "Break-even (pp)",
                    "Detectable lift (pp)", "Detectable revenue lift (CU)", "Readable alone?", "Sized for its decision?"]
-st.dataframe(arm_tbl, hide_index=True, width="stretch")
+table(arm_tbl, hide_index=True, width="stretch")
 
 # ----------------------------------------------------------------------------- 5. timeline
 st.subheader("5. Timeline")
-st.dataframe(pd.DataFrame([
+table(pd.DataFrame([
     {"When": "2020-09-23 to 09-25", "What": "Build audiences with the production SQL; hash-split into arms and holdout; balance check; QA counts vs this plan"},
     {"When": "2020-09-28 (launch day)", "What": "Re-score audiences; week-1 sends: At Risk (all cells), Slipping Regulars, Potential Loyalists, Needs Attention; New Customers journey starts"},
     {"When": "2020-09-29", "What": "Champions early-access link (48 h before the public launch)"},

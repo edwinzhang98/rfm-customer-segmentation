@@ -51,11 +51,20 @@ def note(text: str) -> None:
     st.markdown(f'<div class="small-note">{text}</div>', unsafe_allow_html=True)
 
 
-def chart(fig, table: pd.DataFrame | None = None, key: str | None = None, table_label: str = "Data behind this chart") -> None:
+def table(df, hide_index: bool = True, width: str = "stretch", column_config: dict | None = None, **kwargs) -> None:
+    """st.dataframe with thousands separators on numeric columns and '-' for missing values."""
+    data = getattr(df, "data", df)  # pandas Styler keeps the frame in .data
+    cfg = {c: st.column_config.NumberColumn(format="localized") for c in data.columns
+           if pd.api.types.is_numeric_dtype(data[c]) and not pd.api.types.is_bool_dtype(data[c])}
+    cfg.update(column_config or {})
+    st.dataframe(df, hide_index=hide_index, width=width, column_config=cfg, placeholder="-", **kwargs)
+
+
+def chart(fig, data: pd.DataFrame | None = None, key: str | None = None, table_label: str = "Data behind this chart") -> None:
     st.plotly_chart(fig, width="stretch", config=PLOTLY_CONFIG, key=key)
-    if table is not None:
+    if data is not None:
         with st.expander(table_label, expanded=False):
-            st.dataframe(table, hide_index=True, width="stretch")
+            table(data)
 
 
 # ----------------------------------------------------------------------------- cached data

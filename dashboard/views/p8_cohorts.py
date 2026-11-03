@@ -32,7 +32,7 @@ note(f"Showing {n_months} months of follow-up, the most every selected cohort ha
 
 st.subheader("3. The order ladder")
 lad = mart("order_ladder")
-chart(C.order_ladder(lad), table=lad.round(3), key="ladder")
+chart(C.order_ladder(lad), data=lad.round(3), key="ladder")
 ol = m["order_ladder"]["new: first order 2019-03-01 to 2019-09-22"]
 st.markdown(
     f"For likely new customers, {pct(ol['1'], 0)} place a second order within a year; once they have two orders, {pct(ol['2'], 0)} place a third, "

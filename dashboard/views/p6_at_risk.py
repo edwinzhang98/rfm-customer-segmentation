@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from common import backtest, callout, chart, customers, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct
+from common import backtest, callout, chart, customers, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct, table
 from rfm import charts as C
 
 page_header(
@@ -18,13 +18,13 @@ ar = m["segments"]["At Risk"]
 sl = m["segments"]["Slipping Regulars"]
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("At Risk customers", fmt_n(ar["customers"]), f"{pct(ar['pct_customers'])} of customers", delta_color="off")
+c1.metric("At Risk customers", fmt_n(ar["customers"]), f"{pct(ar['pct_customers'])} of customers", delta_color="off", delta_arrow="off")
 c2.metric("Expected next 90 days if we do nothing", fmt_cu(ar["expected_90d_cu_base"]),
-          f"usual pace {fmt_cu(ar['run_rate_90d_cu'])}", delta_color="off")
+          f"usual pace {fmt_cu(ar['run_rate_90d_cu'])}", delta_color="off", delta_arrow="off")
 c3.metric("Gap vs usual pace", fmt_cu(ar["gap_90d_cu_base"]), f"scenarios {fmt_cu(ar['gap_90d_cu_low'])} to {fmt_cu(ar['gap_90d_cu_high'])}",
-          delta_color="off")
+          delta_color="off", delta_arrow="off")
 c4.metric("Expected non-buyers", fmt_n(ar["expected_non_buyers_base"]), f"{pct(1 - ar['repurchase_rate_90d_base'], 0)} of the segment",
-          delta_color="off")
+          delta_color="off", delta_arrow="off")
 
 callout(
     f"<b>How to say it to the CRM Manager.</b> Left alone, At Risk customers will spend about {fmt_cu(ar['expected_90d_cu_base'])} in the next 90 days, "
@@ -46,7 +46,7 @@ for c in ["Usual 90-day pace (CU)", "Expected, do nothing (CU)", "Gap vs pace (C
           "Plan's expected incremental revenue (CU)", "Expected non-buyers"]:
     tbl[c] = tbl[c].round(0)
 tbl["Buy again within 90 days"] = (100 * tbl["Buy again within 90 days"]).round(1).astype(str) + "%"
-st.dataframe(tbl, hide_index=True, width="stretch")
+table(tbl, hide_index=True, width="stretch")
 rtm = mart("regression_to_mean")
 ch5 = rtm[(rtm.segment == "Champions") & (rtm.m_score == 5)].realisation.iloc[0]
 ch4 = rtm[(rtm.segment == "Champions") & (rtm.m_score == 4)].realisation.iloc[0]
@@ -84,10 +84,10 @@ if len(bsel) and bsel.run_rate_90d_cu.sum() > 0 and len(sel):
     aov = float(sel.monetary_12m_cu.sum() / max(sel.frequency_12m.sum(), 1))
     expected = run_rate * ratio
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Customers in your audience", f"{len(sel):,}", f"{pct(len(sel) / len(cur))} of customers", delta_color="off")
-    k2.metric("Would buy again within 90 days anyway", pct(rate, 0), f"{len(bsel):,} look-alikes in the backtest", delta_color="off")
+    k1.metric("Customers in your audience", f"{len(sel):,}", f"{pct(len(sel) / len(cur))} of customers", delta_color="off", delta_arrow="off")
+    k2.metric("Would buy again within 90 days anyway", pct(rate, 0), f"{len(bsel):,} look-alikes in the backtest", delta_color="off", delta_arrow="off")
     k3.metric("Expected non-buyers", f"{round(len(sel) * (1 - rate)):,}")
-    k4.metric("Gap vs usual pace, next 90 days", fmt_cu(run_rate - expected), f"{pct(1 - ratio, 0)} below usual pace", delta_color="off")
+    k4.metric("Gap vs usual pace, next 90 days", fmt_cu(run_rate - expected), f"{pct(1 - ratio, 0)} below usual pace", delta_color="off", delta_arrow="off")
     chart(C.shortfall_waterfall(run_rate, expected, "Your audience"), key="wf")
 
     st.subheader("3. How much could a win-back campaign recover?")
@@ -99,7 +99,7 @@ if len(bsel) and bsel.run_rate_90d_cu.sum() > 0 and len(sel):
     inc_rev = inc_buyers * aov
     k1, k2, k3 = st.columns(3)
     k1.metric("Incremental buyers", f"{round(inc_buyers):,}")
-    k2.metric("Incremental revenue", fmt_cu(inc_rev), f"one extra order of {aov:.0f} CU each", delta_color="off")
+    k2.metric("Incremental revenue", fmt_cu(inc_rev), f"one extra order of {aov:.0f} CU each", delta_color="off", delta_arrow="off")
     k3.metric("Share of the gap recovered", pct(inc_rev / max(run_rate - expected, 1)))
     note("Even a strong campaign recovers a small slice of the gap. A 10-point lift would already be exceptional for a win-back programme.")
 else:

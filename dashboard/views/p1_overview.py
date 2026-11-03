@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import callout, chart, fmt_cu, fmt_n, how_to_read, mart, metrics, page_header, pct
+from common import callout, chart, fmt_cu, fmt_n, how_to_read, mart, metrics, page_header, pct, table
 from rfm import campaign as CP
 from rfm import charts as C
 from rfm.segments import SEGMENT_INFO, SEGMENT_ORDER
@@ -17,14 +17,14 @@ seg = m["segments"]
 sc = camp["scenarios"]
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Customers with a purchase", fmt_n(d["customers_with_orders"], 2),
+c1.metric("Customers", fmt_n(d["customers_with_orders"], 2),
           help="Distinct customers with at least one order between 2018-09-20 and 2020-09-22")
-c2.metric("Active in the last 12 months", fmt_n(d["active_12m_customers"]), f"{pct(d['pct_active_12m'])} of customers",
-          delta_color="off")
-c3.metric("12-month revenue", fmt_cu(d["revenue_12m_cu"]), "2019-09-23 to 2020-09-22", delta_color="off",
+c2.metric("Active (12 months)", fmt_n(d["active_12m_customers"]), f"{pct(d['pct_active_12m'])} of customers",
+          delta_color="off", delta_arrow="off")
+c3.metric("Revenue (12 months)", fmt_cu(d["revenue_12m_cu"]), "2019-09-23 to 2020-09-22", delta_color="off", delta_arrow="off",
           help="CU = price x 590 (scaled retail price; currency undisclosed). Gross demand: the data has no returns.")
-c4.metric("At Risk: expected next 90 days", fmt_cu(h["at_risk_expected_90d_cu"]),
-          f"{fmt_cu(h['at_risk_gap_90d_cu'])} below their usual pace", delta_color="off",
+c4.metric("At Risk, next 90 days", fmt_cu(h["at_risk_expected_90d_cu"]),
+          f"{fmt_cu(h['at_risk_gap_90d_cu'])} below their usual pace", delta_color="off", delta_arrow="off",
           help="What look-alike customers spent after 2019-09-22, re-weighted to today's mix")
 
 st.subheader("Three things the CRM Manager needs to know")
@@ -57,7 +57,7 @@ callout(
 )
 
 prof = mart("segment_profile")
-chart(C.segment_share(prof), table=prof[["segment", "customers", "pct_customers", "pct_revenue_12m", "pct_revenue_2y"]]
+chart(C.segment_share(prof), data=prof[["segment", "customers", "pct_customers", "pct_revenue_12m", "pct_revenue_2y"]]
       .assign(pct_customers=lambda x: (100 * x.pct_customers).round(1), pct_revenue_12m=lambda x: (100 * x.pct_revenue_12m).round(1),
               pct_revenue_2y=lambda x: (100 * x.pct_revenue_2y).round(1))
       .rename(columns={"pct_customers": "% customers", "pct_revenue_12m": "% 12m revenue", "pct_revenue_2y": "% 2y revenue"}))
@@ -80,7 +80,7 @@ for s in SEGMENT_ORDER:
         "Autumn action": action,
         "Expected net (CU, base)": None if arms.empty else round(float(arms.net_profit_cu.sum())),
     })
-st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch",
+table(pd.DataFrame(rows), hide_index=True, width="stretch",
              column_config={"Customers": st.column_config.NumberColumn(format="%d"),
                             "Expected net (CU, base)": st.column_config.NumberColumn(format="%d"),
                             "Autumn action": st.column_config.TextColumn(width="large"),

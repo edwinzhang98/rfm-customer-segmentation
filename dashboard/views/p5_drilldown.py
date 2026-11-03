@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct, segment_select
+from common import chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct, segment_select, table
 from rfm import charts as C
 from rfm.campaign import category_focus
 
@@ -24,17 +24,17 @@ dim = {"Garment group": "garment_group", "Department": "index_group", "Product g
 
 p = prof.loc[seg]
 k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Customers", fmt_n(p.customers), f"{pct(p.pct_customers)} of all", delta_color="off")
-k2.metric("12-month revenue", fmt_cu(p.revenue_12m_cu), f"{pct(p.pct_revenue_12m)} of all", delta_color="off")
+k1.metric("Customers", fmt_n(p.customers), f"{pct(p.pct_customers)} of all", delta_color="off", delta_arrow="off")
+k2.metric("12-month revenue", fmt_cu(p.revenue_12m_cu), f"{pct(p.pct_revenue_12m)} of all", delta_color="off", delta_arrow="off")
 k3.metric("Average order value", f"{(p.aov_12m_cu if pd.notna(p.aov_12m_cu) else p.aov_2y_cu):.1f} CU",
-          "two-year AOV" if pd.isna(p.aov_12m_cu) else None, delta_color="off")
+          "two-year AOV" if pd.isna(p.aov_12m_cu) else None, delta_color="off", delta_arrow="off")
 online = p.pct_online_only_12m if pd.notna(p.pct_online_only_12m) else p.pct_online_only_2y
-k4.metric("Online only", pct(online, 0), "last 12 months" if pd.notna(p.pct_online_only_12m) else "two years", delta_color="off")
-k5.metric("Reachable by email", pct(p.pct_newsletter, 0), "fashion-news subscribers", delta_color="off")
+k4.metric("Online only", pct(online, 0), "last 12 months" if pd.notna(p.pct_online_only_12m) else "two years", delta_color="off", delta_arrow="off")
+k5.metric("Reachable by email", pct(p.pct_newsletter, 0), "fashion-news subscribers", delta_color="off", delta_arrow="off")
 
 st.subheader(f"1. What {seg} bought in their last active period")
 d = mix[(mix.segment == seg) & (mix.dimension == dim) & (mix.value != "Unknown")]
-chart(C.category_affinity(mix, seg, dim), table=d[["value", "amount", "segment_share", "overall_share", "affinity_index"]]
+chart(C.category_affinity(mix, seg, dim), data=d[["value", "amount", "segment_share", "overall_share", "affinity_index"]]
       .rename(columns={"value": "category", "amount": "revenue (CU)"}).round(3), key=f"aff_{seg}_{dim}")
 note(f"Category focus used in the campaign (index >= 120 and >= 5% of the segment's revenue): {category_focus().get(seg, '-')}. "
      "Window: last 12 months vs all customers' last 12 months; Lost: two years vs all customers' two years. Affinity also reflects "
@@ -53,23 +53,17 @@ had **no identified store purchase** in that time; {fmt_n(h['online_only_active_
 are Champions, Loyal or Slipping Regulars. {fmt_n(h['store_only_active_customers'])} active customers are the mirror image: store only.
 """
 )
-c1, c2 = st.columns(2)
-with c1:
-    chart(C.channel_mix(mix, seg), key="chmix")
-with c2:
-    net = st.toggle("Apply an illustrative returns haircut (25% online, 8% store)", value=False, key="net_toggle")
-    cv = mart("channel_value")
-    chart(C.channel_value(cv, net_of_returns=net), table=cv.round(1), key=f"chval_{net}")
-c1, c2 = st.columns([3, 2])
-with c1:
-    chart(C.channel_forward(mart("channel_forward")), key="chfwd")
-with c2:
-    aov = mart("channel_order_aov")
-    st.markdown("**Same customers, different baskets**")
-    st.dataframe(aov.round(2).rename(columns={"customers_group": "customers", "order_channel": "order channel", "aov_cu": "AOV (CU)",
-                                              "units_per_order": "items per order"}), hide_index=True, width="stretch")
-    st.caption("Among omnichannel customers (who use both), an online order is about twice a store order: the 'online-only spend more' pattern "
-               "is mostly basket size, not a different kind of customer.")
+chart(C.channel_mix(mix, seg), key="chmix")
+net = st.toggle("Apply an illustrative returns haircut (25% online, 8% store)", value=False, key="net_toggle")
+cv = mart("channel_value")
+chart(C.channel_value(cv, net_of_returns=net), data=cv.round(1), key=f"chval_{net}")
+aov = mart("channel_order_aov")
+st.markdown("**Same customers, different baskets:** AOV of store vs online orders in the last 12 months")
+table(aov.round(2).rename(columns={"customers_group": "customers", "order_channel": "order channel", "aov_cu": "AOV (CU)",
+                                   "units_per_order": "items per order"}))
+st.caption("Among omnichannel customers (who use both), an online order is about twice a store order: the 'online-only spend more' pattern "
+           "is mostly basket size, not a different kind of customer.")
+chart(C.channel_forward(mart("channel_forward")), key="chfwd")
 st.markdown(
     f"""
 **What it means for the campaign.** Online-only customers are not low-value, but they are not better customers either: their bigger baskets
@@ -94,7 +88,7 @@ with c1:
     chart(C.age_mix(mix, seg), key=f"age_{seg}")
 with c2:
     attr = mix[(mix.segment == seg) & mix.dimension.isin(["value_tier", "club_member_status", "newsletter_frequency", "first_order_channel"])]
-    st.dataframe(attr.assign(share=(100 * attr.segment_share).round(1), all_customers=(100 * attr.overall_share).round(1),
+    table(attr.assign(share=(100 * attr.segment_share).round(1), all_customers=(100 * attr.overall_share).round(1),
                              index=attr.affinity_index.round(0))[["dimension", "value", "share", "all_customers", "index"]]
                  .rename(columns={"share": f"% of {seg}", "all_customers": "% of all customers"}),
                  hide_index=True, width="stretch", height=420)

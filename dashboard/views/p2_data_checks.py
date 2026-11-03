@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct
+from common import chart, fmt_cu, fmt_n, how_to_read, mart, metrics, note, page_header, pct, table
 from rfm import charts as C
 
 page_header(
@@ -12,12 +12,12 @@ page_header(
 m = metrics()
 d = m["data"]
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Transaction rows", fmt_n(d["transaction_rows"]), "one row = one item", delta_color="off")
-c2.metric("Orders (customer x day x channel)", fmt_n(d["orders"]), delta_color="off")
-c3.metric("Data quality checks", f"{d['dq_pass']} pass / {d['dq_flag']} flagged", f"{d['dq_fail']} failed", delta_color="off",
+c1.metric("Transaction rows", fmt_n(d["transaction_rows"]), "one row = one item", delta_color="off", delta_arrow="off")
+c2.metric("Orders (customer x day x channel)", fmt_n(d["orders"]), delta_color="off", delta_arrow="off")
+c3.metric("Data quality checks", f"{d['dq_pass']} pass / {d['dq_flag']} flagged", f"{d['dq_fail']} failed", delta_color="off", delta_arrow="off",
           help="FLAG = known issue that is handled as described in the table")
 c4.metric("Reconciliation checks", f"{d['reconciliation_checks_passed']} / {d['reconciliation_checks_total']} pass",
-          "units, revenue, customers add up at every step", delta_color="off")
+          "units, revenue, customers add up at every step", delta_color="off", delta_arrow="off")
 
 st.subheader("1. Data quality checks on the raw files")
 dq = mart("dq_checks")
@@ -30,17 +30,14 @@ def _status_style(v: str) -> str:
 
 view = dq[["check_id", "area", "check_name", "status", "observed", "expectation", "handling"]].rename(
     columns={"check_id": "#", "check_name": "check"})
-st.dataframe(view.style.map(_status_style, subset=["status"]), hide_index=True, width="stretch", height=420)
+table(view.style.map(_status_style, subset=["status"]), hide_index=True, width="stretch", height=420)
 note("Known row counts come from the Kaggle competition's data page. SQL: sql/01_data_quality_checks.sql")
 
 st.subheader("2. Two fields that needed detective work")
-left, right = st.columns(2)
-with left:
-    chart(C.weekly_channel(mart("weekly_channel_trend")), key="weekly")
-with right:
-    pp = mart("price_points")
-    chart(C.price_points(pp), table=pp[["price_cu", "units"]].head(15).rename(columns={"price_cu": "price x 590", "units": "items sold"}),
-          key="prices")
+chart(C.weekly_channel(mart("weekly_channel_trend")), key="weekly")
+pp = mart("price_points")
+chart(C.price_points(pp), data=pp[["price_cu", "units"]].head(15).rename(columns={"price_cu": "price x 590", "units": "items sold"}),
+      key="prices")
 
 st.subheader("3. How the messy parts were handled")
 st.markdown(
@@ -67,7 +64,7 @@ flag_c = ex.lifetime_purchase_days >= t_days
 flag = flag_a | flag_b | flag_c
 total_rev = float(ex.lifetime_revenue_cu.sum())
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Accounts flagged", f"{int(flag.sum()):,}", f"{pct(flag.mean(), 3)} of customers", delta_color="off")
+k1.metric("Accounts flagged", f"{int(flag.sum()):,}", f"{pct(flag.mean(), 3)} of customers", delta_color="off", delta_arrow="off")
 k2.metric("Their share of revenue", pct(ex.lifetime_revenue_cu[flag].sum() / total_rev, 2))
 k3.metric("Flagged by bulk article / bulk order", f"{int(flag_a.sum()):,} / {int(flag_b.sum()):,}")
 k4.metric("Flagged by very frequent buying", f"{int(flag_c.sum()):,}")
@@ -76,7 +73,7 @@ note(f"Default rule (20 / 100 / 150) flags {m['data']['review_list_customers']:,
 
 st.subheader("5. Reconciliation: do the totals add up across tables?")
 rec = mart("reconciliation_checks")
-st.dataframe(rec.assign(passed=rec.passed.map({True: "PASS", False: "FAIL"}))
+table(rec.assign(passed=rec.passed.map({True: "PASS", False: "FAIL"}))
              .style.map(_status_style, subset=["passed"]).format({"left_value": "{:,.2f}", "right_value": "{:,.2f}", "difference": "{:,.2f}"}),
              hide_index=True, width="stretch")
 note("Revenue is stored in integer cents, so these totals are exactly equal (difference 0.00), not just close. SQL: sql/13_reconciliation_checks.sql")

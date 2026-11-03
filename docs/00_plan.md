@@ -1,58 +1,60 @@
-# 00 — Project plan (one page)
+# 00 — Project plan
 
-**Project:** RFM customer segmentation & autumn CRM campaign plan — H&M transactions 2018-09-20 → 2020-09-22
-**Author role:** Marketing Analyst, CRM / Marketing Analytics team (reporting to the CRM Manager)
-**Status:** plan approved; work started after writing this page.
+**Project:** RFM customer segmentation and autumn CRM campaign plan, H&M transactions 2018-09-20 to 2020-09-22
+**Owner:** Marketing Analyst, CRM / Marketing Analytics (requester: CRM Manager)
+**Started:** 2026-11-03 · data snapshot 2020-09-22 · campaign launch assumed for the week of 2020-09-28
 
 ## 1. Data
 
-| Source | Rows | Use |
+| Source | Rows | Used for |
 |---|---|---|
-| `transactions_train.csv` | 31,788,324 item rows, 1,362,281 customers, 2018-09-20 → 2020-09-22 | orders, RFM, cohorts, channel |
+| `transactions_train.csv` | 31,788,324 item rows; 1,362,281 customers; 2018-09-20 to 2020-09-22 | orders, RFM, backtests, cohorts, channel |
 | `customers.csv` | 1,371,980 customers | age, club status, newsletter subscription (= email reach) |
 | `articles.csv` | 105,542 articles | category hierarchy for segment profiles |
 
-Read from `~/projects/data-projects/datasets/p3-comp-hm-2020/` (configurable in `config.yaml` / `.env`), staged to Parquet with DuckDB (full staging takes ~5 s, so all development runs on the **full** data, not a sample). Raw data is never committed.
+Source: H&M Personalized Fashion Recommendations dataset (public, 2022). Files are read from the folder set in `config.yaml` / `.env` and staged to Parquet with DuckDB; the full data is processed (staging takes a few seconds, so no sampling was needed). Raw data is never committed.
 
-Findings from the first profiling pass that shape the plan:
-- **Channel encoding verified against a known event:** channel 1 has *zero* rows from 2020-03-23 to 2020-04-26 (COVID store closures) while channel 2 spikes → 1 = store, 2 = online.
-- **Prices are scaled:** `price × 590` lands exactly on retail price points (9.99, 19.99, 14.99 …) for 100% of rows. We report money as **CU (currency units) = price × 590**; the currency itself is not disclosed. Shares and ratios are unaffected by the unit.
-- **No quantity column:** 2.97M rows (9.4%) are exact repeats of another row = extra units of the same item, not errors.
-- **Extreme buyers exist:** e.g. one customer bought 569 identical units in one day; another bought on 427 of 734 days → staff / reseller rule needed.
+What the first profiling pass established:
+- **Channel encoding confirmed by a known event:** channel 1 has no sales from 2020-03-20 to 2020-05-05 (COVID store closures; stores reopened 2020-05-06) while channel 2 jumps, so 1 = store and 2 = online.
+- **Prices are scaled:** `price × 590` lands exactly on retail price points (9.99, 19.99, 14.99 …) for every row, so money is reported as **CU (currency units)**; the currency itself is not disclosed. Revenue is gross demand: the file has no returns.
+- **No quantity column:** 2.97M rows (9.4%) repeat another row exactly; they are extra units of the same item, not errors.
+- **Some accounts buy like a business** (569 identical units in one day; purchases on 427 of 734 days), which needs a review rule.
 
 ## 2. Analysis outline
 
-1. **Scope & metrics first** — `01_request_and_scope.md`, `02_metric_definitions.md` (Recency / Frequency / Monetary, active, churn, order, CU).
-2. **Data quality** (`sql/01_data_quality_checks.sql`, `notebooks/01_cleaning`) — row-count reconciliation, keys, nulls, price outliers, duplicates, time range, extreme customers → `03_data_quality_checks.md`.
-3. **RFM scoring** (`sql/05_customer_rfm.sql`, `notebooks/02_rfm`) — snapshot 2020-09-22; F and M over trailing 12 months; **business thresholds vs quantile cut compared**; thresholds justified with the observed "chance of buying again in the next 90 days by recency" curve.
-4. **Segmentation** (`notebooks/03_segments_and_actions`) — 8 rule-based lifecycle segments + an *Excluded* group (staff/reseller). K-Means on log-RFM as a comparison only.
-5. **Segment profiles** — customers, revenue share, AOV, purchase cycle, category affinity, store vs online, age, newsletter reach.
-6. **"If we do nothing" counterfactual** — apply the same segment rules at 2019-09-22 (same season one year earlier) and 2020-06-24 (most recent quarter), observe actual next-90-day behaviour, project the current At Risk / Needs Attention revenue for the next 90 days → revenue at risk with a range.
-7. **Campaign plan & measurement** — one row per segment (goal, action, timing, channel, category, expected lift, KPI, cost, risk), break-even lift, randomised holdout with minimum detectable effect per segment.
-8. **Cohorts** (`notebooks/04_cohort`) — retention and cumulative revenue per customer (observed LTV) by first-purchase month and first channel.
+1. **Scope and metric definitions first:** `01_request_and_scope.md`, `02_metric_definitions.md`.
+2. **Data quality** (`sql/01`, `sql/13`, notebook 01): row counts, keys, nulls, prices, duplicates, time range, extreme accounts, reconciliation → `03_data_quality_checks.md`.
+3. **RFM scoring** (`sql/05`, notebook 02): snapshot 2020-09-22, F and M over the trailing 12 months, fixed thresholds compared with quintiles, the recency return curve, threshold sensitivity, K-Means as a cross-check.
+4. **Segments** (notebook 03): 9 lifecycle segments + a Review List, a value tier as second axis, profiles (size, value, AOV, cycle, category affinity, channel, age, email reach), backtest validation, quarter-on-quarter migration.
+5. **"If we do nothing"** (notebook 03): the same rules applied at 2019-09-22 (same season) and 2020-06-24 (last quarter), next-90-day behaviour observed and re-weighted to today's customer mix.
+6. **Campaign plan and economics:** one row per audience; break-even lift; three scenarios; budget ask.
+7. **Measurement:** the same 10% holdout in every audience, power per arm, decision rules → `measurement_plan.md`.
+8. **Cohorts** (notebook 04): retention and observed LTV by first-order month and first channel; the order ladder.
 
 ## 3. Deliverables
 
-`docs/` (request & scope, metric definitions, data quality, assumptions, readout, segmentation spec, campaign plan), `sql/` (standalone DuckDB files + a single-query RFM), `notebooks/` 01–04 executed and exported to HTML, `dashboard/` multi-page Streamlit app, `reports/report.html` (standalone) + one-page action plan, `README.md`, one-command pipeline (`make all`).
+`docs/` (request and scope, metric definitions, data quality, assumptions, segmentation spec, campaign plan, measurement plan, readout), `sql/` (standalone DuckDB files plus a single-query version of the segmentation), `notebooks/` 01–04 executed and exported to HTML, `dashboard/` (Streamlit, 8 pages in presentation order), `reports/report.html` (standalone) and `reports/action_plan.html`, one-command pipeline (`make all`).
 
-## 4. What we borrow from the reference projects and what we add
+## 4. Prior work reviewed
 
-- **Borrow:** the classic R/F/M 1–5 scoring and named segment map (joaolcorreia/RFM-analysis, klaudia-nazarko/rfm-analysis-python: segment size, value, demographics, behaviour); the idea of *comparing cut methods* (gianfelton: quartiles vs Jenks vs HDBSCAN → here quantile vs business thresholds vs K-Means); an interactive RFM app (mertbozkir Streamlit RFM).
-- **Add (what those projects, and the H&M Kaggle notebooks that all do recommender systems, don't do):** 31.8M-row DuckDB pipeline; store vs online channel (validated with the COVID closure); category affinity per segment; staff/reseller exclusion; revenue at risk from a season-matched backtest; campaign economics with break-even lift; holdout design with power; stakeholder docs a CRM team can execute from.
+Public RFM write-ups usually stop at quintile scores, segment sizes and generic actions, and the public notebooks on this dataset are almost all about product recommendations rather than customer segmentation. This plan keeps the standard R / F / M scoring and named segments, compares cut methods (quintiles vs fixed thresholds vs K-Means) instead of assuming one, and adds what a CRM team needs to act: full-data SQL, store vs online, category affinity, a do-nothing projection from a backtest, campaign economics with break-even lifts, and a holdout design with power.
 
-## 5. Decisions
+## 5. Decision log
 
-| Decision | Choice | Why |
-|---|---|---|
-| Dataset | H&M (primary), not Olist | real, recent, large, has customer attributes, article hierarchy and store/online channel — all needed for the questions asked |
-| Snapshot / Recency base date | 2020-09-22 (last day in data) | required by the brief; recency 0 = bought on the last day |
-| F & M window | trailing 365 days | one full fashion season cycle; "12-month active" is the standard CRM convention; identical features can be rebuilt at backtest dates |
-| Scoring | fixed business thresholds (quantiles shown as comparison) | 34% of active customers have exactly 1 order, so quintile cuts on F tie and split identical customers; fixed thresholds keep segment definitions stable month to month |
-| Segments | 8 rule-based lifecycle segments + Excluded | each segment maps to one CRM journey; rules are SQL `CASE WHEN`s the CRM team can reuse |
-| K-Means | comparison only, not used for targeting | brief says not to cluster for its own sake; clusters move every refit and are hard to explain |
-| Money unit | CU = price × 590 | reconstructed retail price points; documented in assumptions; all shares unit-free |
-| Counterfactual | season-matched backtest (2019-09-22) as base, recent backtest (2020-06-24) as range | transparent "what happened last year to customers who looked like this" — no black-box churn model |
-| Cohort page | added as an appendix page after the 7 required pages | brief lists cohort as a supplement; keeps the required story order intact |
+| Date | Decision | Why | Consulted |
+|---|---|---|---|
+| 2026-11-03 | Use the H&M data, not Olist | real, large, has customer attributes, article hierarchy and store/online channel, all needed for the questions asked | CRM Manager (brief) |
+| 2026-11-03 | Snapshot 2020-09-22; F and M over the trailing 365 days | last day in the data; one full fashion season cycle; the same features can be rebuilt at backtest dates | — |
+| 2026-11-03 | Fixed thresholds, quintiles shown for comparison | R and M cut-offs are rounded quintiles; F ties on one order (34% of active customers); fixed numbers keep audiences stable month to month | CRM team (naming) |
+| 2026-11-03 | Money in CU = price × 590, gross demand | reconstructed shelf prices; shares and ratios do not depend on the unit; no returns in the data | Finance to confirm margin |
+| 2026-11-03 | K-Means as a cross-check only | no natural clusters (separation best at k = 2); clusters move when refit; CRM tools need rules | — |
+| 2026-11-03 | Split Loyal into Loyal and Slipping Regulars; add a value tier | 65% of the original Loyal group were frequent buyers already 61–120 days quiet; high spenders also sit outside Champions | method review |
+| 2026-11-03 | Do-nothing projection = gap vs usual pace, re-weighted to today's mix, with scenarios | part of every gap is natural slowdown; today's At Risk group is unlike either backtest (60% last bought in the 2020 lockdown) | method review |
+| 2026-11-03 | Content-led rollout; discounts only in two sized test cells | valued at one order, a coupon needs a 5+ point lift to pay back where a quarter or more buy anyway | Finance (margin), CRM Manager (budget) |
+| 2026-11-03 | Same 10% holdout in every audience; ITT; repurchase rate as primary KPI | unequal holdout shares would bias the pooled read; revenue is too noisy to be the primary KPI | — |
+| 2026-11-03 | Review List instead of "exclude" for bulk / near-daily buyers | the data cannot prove staff or reseller status; 0.5% of revenue, so no result depends on it | Retail ops to review |
+| 2026-11-03 | Cohort analysis as an appendix page after the seven presentation pages | supports the New Customers decision without changing the story order | — |
 
-## 6. Risks / known limitations (tracked in `assumptions.md`)
-Store purchases are only visible when the member identifies (online over-represented, "online-only" may include anonymous store shoppers) · 2020 is a COVID year · first purchase in data ≠ first purchase ever (left-censoring) · no campaign or margin data, so lift and cost are planning assumptions that the holdout test is designed to replace.
+## 6. Known limitations (tracked in `assumptions.md`)
+
+Store purchases are only visible when the member identifies · revenue is before returns · 2020 is a COVID year · the first order in the data is not always a customer's first order ever · there is no past campaign, coupon or margin data, so lifts and costs are planning assumptions until the holdout measures them.

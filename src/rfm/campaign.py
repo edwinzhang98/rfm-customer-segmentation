@@ -174,7 +174,7 @@ PLAN: list[Arm] = [
         "Directional; feeds the pooled read",
         "Low risk, near-zero cost"),
     Arm("at_risk_181_364_high", "Win-back content + paid social", "Rollout",
-        "Long-lapsed but high-spending customers: worth paying to reach the ~60% not on email",
+        "Long-lapsed but high-spending customers: worth paying to reach the ~70% not on email",
         "Same win-back message; paid-social retargeting to non-subscribers with the knitwear / outerwear creative. No discount.",
         "Week 1 (from 2020-09-28); retargeting runs 3 weeks, stops for anyone who buys",
         "Email (subscribers) + paid social (non-subscribers, holdout uploaded as an exclusion audience)",

@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import chart, how_to_read, mart, metrics, note, page_header, pct
+from common import chart, how_to_read, mart, metrics, note, page_header, pct, table
 from rfm import charts as C
 from rfm.segments import SEGMENT_INFO
 
@@ -34,7 +34,7 @@ view = pd.DataFrame({
     "% VIP": (100 * prof["pct_vip"]).round(1),
     "Median age": prof["median_age"],
 })
-st.dataframe(view, hide_index=True, width="stretch",
+table(view, hide_index=True, width="stretch",
              column_config={"Customers": st.column_config.NumberColumn(format="%d"),
                             "Definition": st.column_config.TextColumn(width="large")})
 note("AOV = 12-month revenue / 12-month orders (Lost: two-year AOV; Lost '% online only' uses two years). Days between orders only for customers "
@@ -43,7 +43,7 @@ note("AOV = 12-month revenue / 12-month orders (Lost: two-year AOV; Lost '% onli
 st.subheader("3. Value as a second axis")
 what = st.radio("Cells show", ["customers", "12-month revenue"], horizontal=True, key="vg_what")
 grid = mart("value_grid")
-chart(C.value_grid(grid, "customers" if what == "customers" else "revenue_12m_cu"), table=grid, key="vgrid")
+chart(C.value_grid(grid, "customers" if what == "customers" else "revenue_12m_cu"), data=grid, key="vgrid")
 st.markdown(
     "Lifecycle (rows) says **what to do**; value tier (columns) says **how much effort a customer is worth**. The tier decides paid reach "
     "(paid social only for long-lapsed At Risk customers spending 200+ CU) and keeps VIPs visible wherever they sit: "
@@ -52,7 +52,7 @@ st.markdown(
 
 st.subheader("4. Do the segments predict behaviour? (backtest)")
 so = mart("segment_outcomes_90d")
-chart(C.segment_outcomes(so), table=so[["snapshot_name", "segment", "customers", "repurchase_rate", "revenue_per_customer_cu",
+chart(C.segment_outcomes(so), data=so[["snapshot_name", "segment", "customers", "repurchase_rate", "revenue_per_customer_cu",
                                         "realisation_ratio"]].round(3), key="outcomes")
 st.markdown(
     "Exactly the same rules applied at two past dates, then what each segment actually did in the following 90 days. The order holds at both "
@@ -71,11 +71,8 @@ st.markdown(
 
 st.subheader("6. Why rules and not K-Means?")
 km = m["kmeans"]
-c1, c2 = st.columns(2)
-with c1:
-    chart(C.kmeans_selection(mart("kmeans_k_selection"), km["k_final"]), key="ksel")
-with c2:
-    chart(C.kmeans_crosstab(mart("kmeans_crosstab"), mart("kmeans_profile")), key="kct")
+chart(C.kmeans_selection(mart("kmeans_k_selection"), km["k_final"]), key="ksel")
+chart(C.kmeans_crosstab(mart("kmeans_crosstab"), mart("kmeans_profile")), key="kct")
 st.markdown(
     f"""
 - **No natural clusters.** Separation (silhouette) is best at k = 2 ({km['silhouette_by_k']['2']:.2f}, basically "recent vs not") and falls as k grows,

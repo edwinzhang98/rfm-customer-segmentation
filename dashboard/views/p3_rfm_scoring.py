@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from common import chart, customers, how_to_read, mart, note, page_header, pct
+from common import chart, customers, how_to_read, mart, note, page_header, pct, table
 from rfm import charts as C
 from rfm.segments import SEGMENT_ORDER, Thresholds, assign_segments, quantile_edges, quantile_scores, score, segment_summary
 
@@ -17,7 +17,7 @@ basis = st.radio("Reference date for the backtest", ["2019-09-22 (same season la
                  horizontal=True, key="rc_basis")
 curve = mart("recency_return_curve")
 snap = "backtest_seasonal" if basis.startswith("2019") else "backtest_recent"
-chart(C.return_curve(curve, snap), table=curve[curve.snapshot_name == snap][
+chart(C.return_curve(curve, snap), data=curve[curve.snapshot_name == snap][
     ["frequency_group", "recency_bucket_start", "recency_bucket_end", "customers", "return_rate_90d"]], key="curve")
 st.markdown(
     "The curve falls smoothly (about 4-5 points every 15 days for repeat buyers) with no cliff, so it supports recency as the main "
@@ -43,7 +43,7 @@ else:
 edges = quantile_edges(active)
 business = {"recency_days": "30 / 60 / 120 / 180 (365+ = Lost)", "frequency_12m": "1 / 2 / 3-4 / 5-9 / 10+",
             "monetary_12m_cu": "50 / 100 / 200 / 400"}
-st.dataframe(C.quantile_vs_business(edges, business), hide_index=True, width="stretch")
+table(C.quantile_vs_business(edges, business), hide_index=True, width="stretch")
 st.markdown(
     "**Why fixed thresholds.** Recency and Monetary cut-offs are the active-customer quintiles rounded to numbers people can say out loud "
     f"(R {' / '.join(f'{v:.0f}' for v in edges['recency_days'])} days -> 30 / 60 / 120 / 180; "
@@ -56,7 +56,7 @@ sens = mart("threshold_sensitivity")
 with st.expander("Sensitivity: segment sizes if every cut-off in a group moves by 25%", expanded=False):
     piv = sens[sens.variant != "Default"].pivot(index="segment", columns="variant", values="pct_change")
     piv = piv.reindex([s for s in SEGMENT_ORDER if s in piv.index and s not in ("Lost", "Review List", "New Customers")])
-    st.dataframe((100 * piv).round(0).astype(int).astype(str) + "%", width="stretch")
+    table((100 * piv).round(0).astype(int).astype(str) + "%", width="stretch")
     big = piv.loc["Champions"].abs().max()
     st.caption(f"Champions move by {100 * big:.0f}% at most. Segments whose borders are only a few orders wide (Loyal, Slipping Regulars, "
                "At Risk) move a lot more, e.g. At Risk grows sharply when 'used to buy often' starts at 2 orders instead of 3. Segment sizes "
@@ -119,14 +119,14 @@ tbl = tbl[["segment", "customers (default)", "customers (yours)", "pct_revenue_1
 for col in ("pct_revenue_12m (default)", "pct_revenue_12m (yours)"):
     tbl[col] = (100 * tbl[col]).round(1)
 tbl.columns = ["Segment", "Customers (default)", "Customers (yours)", "% 12m revenue (default)", "% 12m revenue (yours)"]
-st.dataframe(tbl, hide_index=True, width="stretch")
+table(tbl, hide_index=True, width="stretch")
 note("Things to try: raise 'Lost if no order for' to see how many Hibernating customers sit just inside the 12-month window; "
      "lower F4 to 4 orders to see Loyal and Champions grow.")
 
 st.subheader("4. Where customers sit on the Recency x Frequency grid")
 what = st.radio("Show", ["customers", "12-month revenue"], horizontal=True, key="grid_what")
 grid = mart("rf_grid")
-chart(C.rf_heatmap(grid, "customers" if what == "customers" else "revenue_12m_cu"), table=grid, key="grid")
+chart(C.rf_heatmap(grid, "customers" if what == "customers" else "revenue_12m_cu"), data=grid, key="grid")
 
 how_to_read(
     """
