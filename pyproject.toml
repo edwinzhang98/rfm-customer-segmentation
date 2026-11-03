@@ -1,0 +1,15 @@
+[project]
+name = "rfm"
+version = "1.0.0"
+description = "RFM customer segmentation and CRM campaign planning on H&M transactions (DuckDB + Python)"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

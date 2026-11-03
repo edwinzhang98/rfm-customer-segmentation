@@ -29,7 +29,7 @@
      At Risk             R <= 2 and (F >= 3 or M >= 4)   (121-364 days, used to buy often / a lot)
      Hibernating         everything else         (121-364 days, 1-2 orders, < 200 CU)
    Params  : snapshot_current / snapshot_seasonal / snapshot_recent, lookback_days,
-             r*/f*/m* thresholds, new_customer_days (defaults = config.yaml)
+             R / F / M thresholds, new_customer_days (defaults = config.yaml)
    Run     : python scripts/run_sql.py sql/05_customer_rfm.sql
    ============================================================================= */
 

@@ -1,0 +1,38 @@
+{
+  "timings_s": {
+    "sql/01_data_quality_checks.sql": 11.51,
+    "step:dq": 11.6,
+    "sql/02_fct_sales_lines.sql": 5.04,
+    "sql/03_fct_orders.sql": 0.95,
+    "sql/04_dim_customers.sql": 2.54,
+    "sql/05_customer_rfm.sql": 2.0,
+    "sql/06_customer_outcomes_90d.sql": 0.99,
+    "sql/07_segment_outcomes_90d.sql": 0.03,
+    "sql/08_recency_return_curve.sql": 0.03,
+    "sql/09_segment_profile.sql": 0.17,
+    "sql/10_segment_mix.sql": 1.42,
+    "sql/11_cohort_retention.sql": 0.78,
+    "sql/12_weekly_channel_trend.sql": 0.35,
+    "step:marts": 14.4,
+    "sql/13_reconciliation_checks.sql": 0.68,
+    "step:reconcile": 3.09,
+    "analysis:revenue_at_risk": 0.66,
+    "analysis:channel_value": 0.03,
+    "analysis:order_ladder": 0.21,
+    "analysis:segment_inputs": 0.0,
+    "analysis:campaign_economics": 0.0,
+    "analysis:holdout_power": 0.01,
+    "analysis:kmeans_comparison": 21.26,
+    "analysis:app_tables": 2.15,
+    "analysis:metrics": 0.1,
+    "step:analysis": 26.53
+  },
+  "last_run": {
+    "steps": [
+      "analysis"
+    ],
+    "total_s": 26.53,
+    "python": "3.12.13",
+    "machine": "macOS-26.2-arm64-arm-64bit"
+  }
+}

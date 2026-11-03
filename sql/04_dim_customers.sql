@@ -26,9 +26,13 @@ COPY (
     WITH
     c AS (SELECT * FROM 'data/staged/stg_customers.parquet'),
     o AS (SELECT * FROM 'data/marts/fct_orders.parquet'),
-    max_line AS (
+    max_line AS (   -- most units of one article in one order (a line can split by price)
         SELECT customer_id, MAX(units) AS max_units_same_article
-        FROM 'data/marts/fct_sales_lines.parquet'
+        FROM (
+            SELECT customer_id, order_date, sales_channel_id, article_id, SUM(units) AS units
+            FROM 'data/marts/fct_sales_lines.parquet'
+            GROUP BY ALL
+        )
         GROUP BY 1
     ),
     history AS (
